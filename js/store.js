@@ -1,76 +1,89 @@
 /**
- * localStorage-based data store for MYGO-MUJICA-WEB
+ * MYGO-MUJICA-WEB data store
+ * Layer 1: js/data.json (published, fetched from server)
+ * Layer 2: localStorage (admin edits override layer 1)
  */
 const Store = (() => {
-  const KEY = 'mygo_data';
+  const KEY = 'mygo_admin_data';
   const USER_SESSION = 'mygo_session';
 
-  const defaults = {
-    literature: [
-      { id: '1', title: '示例文章标题', date: '2026-06-01', excerpt: '在这里写下你的文字创作，替换为实际内容后即可发布。', content: '这是文章的正文内容。点击文章标题可以进入详情页查看完整内容和评论。' },
-      { id: '2', title: '另一篇创作', date: '2026-05-20', excerpt: '每一篇文章都是一个独立的世界，等待被书写。', content: '用文字记录下每一个转瞬即逝的灵感。' }
-    ],
-    projects: [
-      { id: '1', name: '项目名称', desc: '这是一个示例项目的简短描述。', detail: '项目的详细介绍，说明技术选型、架构设计等。', tags: ['HTML', 'CSS', 'JavaScript'], link: '' },
-      { id: '2', name: '另一个项目', desc: '用代码构建有趣的东西。', detail: '更详细的项目说明。', tags: ['Python', 'Flask'], link: '' }
-    ],
-    recommendations: {
-      books: [
-        { id: '1', title: '书名', author: '作者', year: '2024', cover: '', review: '这是一篇完整的推荐帖正文。这里写下对这本书的深入评价、读后感、以及推荐理由。', excerpt: '在这里写下你对这本书的推荐理由。' }
-      ],
-      music: [
-        { id: '1', title: '歌曲 / 专辑', artist: '艺术家', year: '2024', cover: '', review: '详细乐评正文，谈谈这张专辑为什么会打动你。', excerpt: '音乐带来的感动值得被记录和分享。' }
-      ],
-      films: [
-        { id: '1', title: '作品名', director: '导演', year: '2023', cover: '', review: '完整的影评正文，分析镜头语言、叙事结构、主题表达。', excerpt: '银幕上那些难忘的故事。' }
-      ]
-    },
-    comments: {},   // { "lit-<id>": [{id,author,content,date,rating}], "proj-<id>": [...], "rec-<id>": [...] }
-    users: [],      // [{username, passwordHash}]
-    siteTitle: 'MYGO-MUJICA-WEB',
-    siteSubtitle: '记录个人的文学创作、代码项目，以及那些值得被记住的作品。',
-    adminPassword: ''
-  };
+  // Published data (loaded async from data.json)
+  let publishedData = null;
+  let dataReady = false;
+  const readyCallbacks = [];
 
-  let data = null;
-
-  function load() {
-    if (data) return data;
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        data = deepMerge(defaults, parsed);
-      } catch (e) {
-        data = JSON.parse(JSON.stringify(defaults));
-      }
-    } else {
-      data = JSON.parse(JSON.stringify(defaults));
-    }
-    return data;
+  function onReady(cb) {
+    if (dataReady) { cb(); return; }
+    readyCallbacks.push(cb);
   }
 
-  function save() {
-    localStorage.setItem(KEY, JSON.stringify(data));
+  function setReady() {
+    dataReady = true;
+    readyCallbacks.forEach(cb => cb());
+    readyCallbacks.length = 0;
   }
 
-  function deepMerge(base, over) {
-    const result = { ...base };
-    for (const key of Object.keys(over)) {
-      if (over[key] && typeof over[key] === 'object' && !Array.isArray(over[key]) && base[key] && typeof base[key] === 'object' && !Array.isArray(base[key])) {
-        result[key] = deepMerge(base[key], over[key]);
-      } else {
-        result[key] = over[key];
-      }
-    }
-    return result;
+  // Load published data from data.json
+  fetch('js/data.json')
+    .then(r => r.json())
+    .then(d => { publishedData = d; setReady(); })
+    .catch(() => {
+      // fallback: use built-in defaults (never happens in prod)
+      publishedData = getBuiltinDefaults();
+      setReady();
+    });
+
+  // ── Admin override (localStorage) ─────
+  function getAdminOverrides() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+
+  function saveAdminOverrides(obj) {
+    localStorage.setItem(KEY, JSON.stringify(obj));
+  }
+
+  // ── Data resolution ──────────────────
+  // Returns: published data merged with admin overrides
+  function getData() {
+    const over = getAdminOverrides();
+    if (!publishedData) return getBuiltinDefaults();
+    // Deep merge: overrides win
+    return {
+      literature: over.literature || publishedData.literature,
+      projects: over.projects || publishedData.projects,
+      recommendations: over.recommendations ? {
+        books: over.recommendations.books || publishedData.recommendations?.books || [],
+        music: over.recommendations.music || publishedData.recommendations?.music || [],
+        films: over.recommendations.films || publishedData.recommendations?.films || []
+      } : (publishedData.recommendations || { books:[], music:[], films:[] }),
+      comments: over.comments || publishedData.comments || {},
+      users: over.users || publishedData.users || [],
+      siteTitle: over.siteTitle || publishedData.siteTitle || 'MYGO-MUJICA-WEB',
+      siteSubtitle: over.siteSubtitle || publishedData.siteSubtitle || '',
+      adminPassword: over.adminPassword || ''
+    };
+  }
+
+  function getBuiltinDefaults() {
+    return {
+      literature: [],
+      projects: [],
+      recommendations: { books:[], music:[], films:[] },
+      comments: {},
+      users: [],
+      siteTitle: 'MYGO-MUJICA-WEB',
+      siteSubtitle: ''
+    };
   }
 
   function genId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
 
-  // ── Simple password hash ──
+  // ── Password hash ─────────────────────
   function hashPw(pw) {
     let hash = 0;
     const salt = 'mygo_salt_2026';
@@ -83,24 +96,29 @@ const Store = (() => {
     return hash.toString(36);
   }
 
-  // ── Users ──────────────────────────────
-  function getUsers() { return load().users; }
+  // ── Users ─────────────────────────────
+  function getUsers() { return getData().users; }
+  function setUsers(users) {
+    const over = getAdminOverrides();
+    over.users = users;
+    saveAdminOverrides(over);
+  }
 
   function register(username, password) {
     if (!username || !password) return { ok: false, msg: '用户名和密码不能为空' };
     if (username.length < 2) return { ok: false, msg: '用户名至少2个字符' };
     if (password.length < 3) return { ok: false, msg: '密码至少3个字符' };
-    const users = load().users;
+    const users = getUsers();
     if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
       return { ok: false, msg: '用户名已存在' };
     }
     users.push({ username, passwordHash: hashPw(password) });
-    save();
+    setUsers(users);
     return { ok: true };
   }
 
   function login(username, password) {
-    const users = load().users;
+    const users = getUsers();
     const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
     if (!user) return { ok: false, msg: '用户不存在' };
     if (user.passwordHash !== hashPw(password)) return { ok: false, msg: '密码错误' };
@@ -108,24 +126,33 @@ const Store = (() => {
     return { ok: true, username: user.username };
   }
 
-  function logout() {
-    sessionStorage.removeItem(USER_SESSION);
+  function logout() { sessionStorage.removeItem(USER_SESSION); }
+  function getCurrentUser() { return sessionStorage.getItem(USER_SESSION) || null; }
+  function isLoggedIn() { return !!sessionStorage.getItem(USER_SESSION); }
+
+  // ── Admin auth ────────────────────────
+  function getAdminPassword() { return getData().adminPassword; }
+  function setAdminPassword(pw) {
+    const over = getAdminOverrides();
+    over.adminPassword = pw;
+    saveAdminOverrides(over);
+  }
+  function isAdminLoggedIn() { return sessionStorage.getItem('mygo_admin_auth') === '1'; }
+  function adminLogin(pw) {
+    const current = getAdminPassword();
+    if (!pw || pw !== current) return false;
+    sessionStorage.setItem('mygo_admin_auth', '1');
+    return true;
+  }
+  function adminLogout() {
+    sessionStorage.removeItem('mygo_admin_auth');
   }
 
-  function getCurrentUser() {
-    return sessionStorage.getItem(USER_SESSION) || null;
-  }
-
-  function isLoggedIn() {
-    return !!sessionStorage.getItem(USER_SESSION);
-  }
-
-  // ── Comments ───────────────────────────
+  // ── Comments ──────────────────────────
   function commentKey(type, id) { return type + '-' + id; }
 
   function getComments(type, id) {
-    const all = load().comments;
-    return all[commentKey(type, id)] || [];
+    return getData().comments[commentKey(type, id)] || [];
   }
 
   function addComment(type, id, content, rating) {
@@ -143,10 +170,11 @@ const Store = (() => {
       rating: Math.round(r * 10) / 10
     };
     const key = commentKey(type, id);
-    const all = load().comments;
-    if (!all[key]) all[key] = [];
-    all[key].push(comment);
-    save();
+    const over = getAdminOverrides();
+    if (!over.comments) over.comments = {};
+    if (!over.comments[key]) over.comments[key] = [];
+    over.comments[key].push(comment);
+    saveAdminOverrides(over);
     return { ok: true, comment };
   }
 
@@ -154,13 +182,13 @@ const Store = (() => {
     const user = getCurrentUser();
     if (!user) return { ok: false, msg: '请先登录' };
     const key = commentKey(type, itemId);
-    const all = load().comments;
-    if (!all[key]) return { ok: false, msg: '评论不存在' };
-    const idx = all[key].findIndex(c => c.id === commentId);
+    const over = getAdminOverrides();
+    if (!over.comments || !over.comments[key]) return { ok: false, msg: '评论不存在' };
+    const idx = over.comments[key].findIndex(c => c.id === commentId);
     if (idx === -1) return { ok: false, msg: '评论不存在' };
-    if (all[key][idx].author !== user) return { ok: false, msg: '只能删除自己的评论' };
-    all[key].splice(idx, 1);
-    save();
+    if (over.comments[key][idx].author !== user) return { ok: false, msg: '只能删除自己的评论' };
+    over.comments[key].splice(idx, 1);
+    saveAdminOverrides(over);
     return { ok: true };
   }
 
@@ -171,17 +199,16 @@ const Store = (() => {
     return Math.round((sum / comments.length) * 10) / 10;
   }
 
-  // ── Getters ────────────────────────────
-  function getLiterature() { return load().literature; }
-  function getProjects() { return load().projects; }
-  function getRecommendations() { return load().recommendations; }
-  function getSiteInfo() { const d = load(); return { title: d.siteTitle, subtitle: d.siteSubtitle }; }
-  function getAdminPassword() { return load().adminPassword; }
+  // ── Content getters ───────────────────
+  function getLiterature() { return getData().literature; }
+  function getProjects() { return getData().projects; }
+  function getRecommendations() { return getData().recommendations; }
+  function getSiteInfo() { const d = getData(); return { title: d.siteTitle, subtitle: d.siteSubtitle }; }
 
-  function getLitById(id) { return load().literature.find(i => i.id === id) || null; }
-  function getProjById(id) { return load().projects.find(i => i.id === id) || null; }
+  function getLitById(id) { return getData().literature.find(i => i.id === id) || null; }
+  function getProjById(id) { return getData().projects.find(i => i.id === id) || null; }
   function getRecById(id) {
-    const all = load().recommendations;
+    const all = getData().recommendations;
     for (const k of ['books', 'music', 'films']) {
       const found = all[k].find(i => i.id === id);
       if (found) return { cat: k, item: found };
@@ -189,30 +216,57 @@ const Store = (() => {
     return null;
   }
 
-  // ── Setters ────────────────────────────
-  function setLiterature(items) { load().literature = items; save(); }
-  function setProjects(items) { load().projects = items; save(); }
-  function setRecommendations(recs) { load().recommendations = recs; save(); }
-  function setSiteInfo(info) {
-    const d = load();
-    if (info.title !== undefined) d.siteTitle = info.title;
-    if (info.subtitle !== undefined) d.siteSubtitle = info.subtitle;
-    save();
+  // ── Content setters (admin only) ──────
+  function setLiterature(items) {
+    const over = getAdminOverrides();
+    over.literature = items;
+    saveAdminOverrides(over);
   }
-  function setAdminPassword(pw) { load().adminPassword = pw; save(); }
+  function setProjects(items) {
+    const over = getAdminOverrides();
+    over.projects = items;
+    saveAdminOverrides(over);
+  }
+  function setRecommendations(recs) {
+    const over = getAdminOverrides();
+    over.recommendations = recs;
+    saveAdminOverrides(over);
+  }
+  function setSiteInfo(info) {
+    const over = getAdminOverrides();
+    if (info.title !== undefined) over.siteTitle = info.title;
+    if (info.subtitle !== undefined) over.siteSubtitle = info.subtitle;
+    saveAdminOverrides(over);
+  }
+
+  // ── Publish: export full data for GitHub commit ──
+  function getPublishData() {
+    const d = getData();
+    return {
+      literature: d.literature,
+      projects: d.projects,
+      recommendations: d.recommendations,
+      comments: d.comments,
+      users: d.users,
+      siteTitle: d.siteTitle,
+      siteSubtitle: d.siteSubtitle
+    };
+  }
 
   return {
-    genId,
+    genId, onReady,
     // Users & Auth
-    register, login, logout, getCurrentUser, isLoggedIn, getUsers,
+    register, login, logout, getCurrentUser, isLoggedIn,
+    // Admin
+    getAdminPassword, setAdminPassword, isAdminLoggedIn, adminLogin, adminLogout,
     // Comments
     getComments, addComment, deleteComment, avgRating,
-    // Content getters
+    // Content
     getLiterature, getProjects, getRecommendations,
     getLitById, getProjById, getRecById,
     getSiteInfo, setSiteInfo,
-    getAdminPassword, setAdminPassword,
-    // Content setters (for admin)
-    setLiterature, setProjects, setRecommendations
+    setLiterature, setProjects, setRecommendations,
+    // Publish
+    getPublishData
   };
 })();

@@ -465,6 +465,86 @@ main {
 [data-theme="dark"] .msg-bar.success { background:#1a3020; color:#81c784; }
 [data-theme="dark"] .msg-bar.error { background:#3d1f1f; color:#ff6b6b; }
 
+/* === Admin Panel === */
+.admin-overlay {
+  display:none; position:fixed; inset:0; z-index:800;
+  background:var(--bg);
+  overflow-y:auto;
+}
+.admin-overlay.show { display:block; }
+.admin-overlay .admin-header-bar {
+  position:sticky; top:0; z-index:10;
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:0.7rem 1.5rem;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.admin-overlay .admin-header-bar h2 { font-size:1.05rem; font-family:var(--font-ui); }
+.admin-overlay .admin-header-bar .admin-actions { display:flex; gap:0.5rem; align-items:center; }
+.admin-body { max-width:900px; margin:0 auto; padding:1.25rem 1.5rem; font-family:var(--font-ui); }
+.admin-body h3 { font-size:1rem; margin-bottom:0.8rem; }
+.admin-tabs { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:1.25rem; }
+.admin-tab-btn {
+  padding:0.5rem 1rem; border:none; background:none; cursor:pointer;
+  font-size:0.88rem; color:var(--text-muted); font-family:var(--font-ui);
+  border-bottom:2px solid transparent; margin-bottom:-2px;
+  transition:color var(--transition), border-color var(--transition);
+}
+.admin-tab-btn:hover { color:var(--accent); }
+.admin-tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+.admin-tab-panel { display:none; }
+.admin-tab-panel.active { display:block; }
+
+/* admin form */
+.admin-form {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:1.25rem; margin-bottom:1rem;
+}
+.admin-form .form-row { margin-bottom:0.6rem; }
+.admin-form label { display:block; font-size:0.82rem; color:var(--text-muted); margin-bottom:0.15rem; }
+.admin-form input, .admin-form textarea, .admin-form select {
+  width:100%; padding:0.5rem 0.6rem; border:1px solid var(--border);
+  border-radius:var(--radius-sm); font-size:0.9rem; font-family:var(--font-ui);
+  background:var(--search-bg); color:var(--text);
+}
+.admin-form input:focus, .admin-form textarea:focus, .admin-form select:focus { outline:none; border-color:var(--accent); }
+.admin-form textarea { min-height:70px; resize:vertical; }
+.admin-form textarea.tall { min-height:140px; }
+.admin-form .btn-row { display:flex; gap:0.5rem; margin-top:0.8rem; }
+.admin-btn {
+  padding:0.45rem 1rem; border:none; border-radius:var(--radius-sm);
+  cursor:pointer; font-size:0.85rem; font-family:var(--font-ui); font-weight:500;
+  transition:opacity var(--transition);
+}
+.admin-btn:hover { opacity:0.85; }
+.admin-btn.primary { background:var(--accent); color:#fff; }
+.admin-btn.outline { background:none; border:1px solid var(--border); color:var(--text); }
+.admin-btn.danger { background:var(--danger); color:#fff; }
+.admin-btn.sm { padding:0.2rem 0.5rem; font-size:0.78rem; }
+
+/* admin item list */
+.admin-item-list { display:flex; flex-direction:column; gap:0.5rem; margin-top:1rem; }
+.admin-item-row {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:0.7rem 1rem;
+  display:flex; justify-content:space-between; align-items:center;
+  gap:0.5rem;
+}
+.admin-item-row .info { flex:1; min-width:0; }
+.admin-item-row .info .name { font-weight:600; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.admin-item-row .info .meta { font-size:0.78rem; color:var(--text-muted); margin-top:0.1rem; }
+.admin-item-row .actions { display:flex; gap:0.3rem; flex-shrink:0; }
+
+/* admin publish */
+.admin-publish-bar {
+  background:var(--accent-light); border:1px solid var(--accent);
+  border-radius:var(--radius); padding:1rem 1.25rem; margin-bottom:1.25rem;
+}
+.admin-publish-bar .hint { font-size:0.82rem; color:var(--text-muted); margin-bottom:0.4rem; }
+.admin-publish-bar .row { display:flex; gap:0.5rem; }
+.admin-publish-bar input { flex:1; }
+.admin-token-hint { font-size:0.78rem; color:var(--text-muted); margin-top:0.3rem; }
+.admin-token-hint code { background:var(--accent-light); padding:0.1rem 0.3rem; border-radius:3px; }
+
 /* === Responsive === */
 @media (max-width: 640px) {
   .header-inner { flex-wrap:wrap; justify-content:center; gap:0.5rem; }
