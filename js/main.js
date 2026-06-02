@@ -83,9 +83,10 @@ function buildSearchIndex() {
     searchIndex.push({ type: '代码项目', id: i.id, url: 'detail.html?type=proj&id=' + i.id, title: i.name, text: i.desc + ' ' + (i.detail||'') + ' ' + (i.tags||[]).join(' ') });
   });
   const recs = Store.getRecommendations();
-  ['books','music','films'].forEach(cat => {
-    recs[cat].forEach(i => {
-      searchIndex.push({ type: '推荐 · ' + ({books:'书籍',music:'音乐',films:'影视'})[cat], id: i.id, url: 'detail.html?type=rec&id=' + i.id, title: i.title, text: (i.excerpt||'') + ' ' + (i.review||'') });
+  const REC_LABELS = {literary:'严肃文学',popular:'流行文学',lightnovel:'轻小说',manga:'漫画',movie:'电影',drama:'电视剧',anime:'动画',music:'音乐'};
+  Object.keys(REC_LABELS).forEach(cat => {
+    (recs[cat] || []).forEach(i => {
+      searchIndex.push({ type: '推荐 · ' + REC_LABELS[cat], id: i.id, url: 'detail.html?type=rec&id=' + i.id, title: i.title, text: (i.excerpt||'') + ' ' + (i.review||'') });
     });
   });
 }
@@ -355,7 +356,18 @@ function renderProjects() {
 function renderRecommendations() {
   const all = Store.getRecommendations();
 
-  function recGrid(items, cat, authorKey) {
+  const CATEGORIES = [
+    { key: 'literary',  label: '严肃文学', icon: '📖' },
+    { key: 'popular',   label: '流行文学', icon: '📚' },
+    { key: 'lightnovel',label: '轻小说',   icon: '📙' },
+    { key: 'manga',     label: '漫画',     icon: '📘' },
+    { key: 'movie',     label: '电影',     icon: '🎬' },
+    { key: 'drama',     label: '电视剧',   icon: '📺' },
+    { key: 'anime',     label: '动画',     icon: '🎞️' },
+    { key: 'music',     label: '音乐',     icon: '🎵' }
+  ];
+
+  function recGrid(items) {
     if (!items.length) return '<p style="color:var(--text-muted);font-size:0.9rem;">暂无</p>';
     return '<div class="rec-grid">' + items.map(i => {
       const avg = Store.avgRating('rec', i.id);
@@ -364,7 +376,7 @@ function renderRecommendations() {
         <a href="detail.html?type=rec&id=${i.id}">
           ${i.cover ? `<img class="rec-cover" src="${esc(i.cover)}" alt="${esc(i.title)}" loading="lazy" onerror="this.style.display='none'">` : ''}
           <h4>${esc(i.title)}</h4>
-          <p class="meta">${esc(i[authorKey] || '')}${i.year ? ' · ' + esc(i.year) : ''}</p>
+          <p class="meta">${esc(i.creator || '')}${i.year ? ' · ' + esc(i.year) : ''}</p>
           <p>${esc(i.excerpt || i.review || '').slice(0, 80)}${(i.excerpt || i.review || '').length > 80 ? '…' : ''}</p>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.4rem;">
             <span style="font-size:0.8rem;color:var(--accent);font-family:var(--font-ui);">
@@ -376,12 +388,10 @@ function renderRecommendations() {
     }).join('') + '</div>';
   }
 
-  const booksEl = document.getElementById('rec-books');
-  const musicEl = document.getElementById('rec-music');
-  const filmsEl = document.getElementById('rec-films');
-  if (booksEl) booksEl.innerHTML = recGrid(all.books, 'books', 'author');
-  if (musicEl) musicEl.innerHTML = recGrid(all.music, 'music', 'artist');
-  if (filmsEl) filmsEl.innerHTML = recGrid(all.films, 'films', 'director');
+  CATEGORIES.forEach(cat => {
+    const el = document.getElementById('rec-' + cat.key);
+    if (el) el.innerHTML = recGrid(all[cat.key] || []);
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -425,8 +435,7 @@ function renderDetail() {
     }
   } else if (type === 'rec') {
     title = item.title;
-    const creator = item.author || item.artist || item.director || '';
-    byline = creator + (item.year ? ' · ' + item.year : '');
+    byline = (item.creator || '') + (item.year ? ' · ' + item.year : '');
     coverUrl = item.cover || '';
     bodyHtml = renderMd(item.review || item.excerpt || '');
   }

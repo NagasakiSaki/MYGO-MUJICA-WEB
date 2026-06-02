@@ -523,9 +523,9 @@ function renderRecTab() {
     <div class="admin-form">
       <h3 id="recFormTitle">新建推荐帖</h3>
       <input type="hidden" id="recId">
-      <div class="form-row"><label>分类</label><select id="recCat" onchange="window.onRecCatChange()"><option value="books">书籍</option><option value="music">音乐</option><option value="films">影视</option></select></div>
+      <div class="form-row"><label>分类</label><select id="recCat"><option value="literary">严肃文学</option><option value="popular">流行文学</option><option value="lightnovel">轻小说</option><option value="manga">漫画</option><option value="movie">电影</option><option value="drama">电视剧</option><option value="anime">动画</option><option value="music">音乐</option></select></div>
       <div class="form-row"><label>标题</label><input type="text" id="recTitle"></div>
-      <div class="form-row" id="recAuthorRow"><label>作者</label><input type="text" id="recAuthor"></div>
+      <div class="form-row"><label>创作者</label><input type="text" id="recAuthor"></div>
       <div class="form-row"><label>年份</label><input type="text" id="recYear"></div>
       <div class="form-row"><label>封面图 URL</label><input type="text" id="recCover" placeholder="https://..."></div>
       <div class="form-row"><label>摘要 / 导语</label><textarea id="recExcerpt"></textarea></div>
@@ -536,28 +536,23 @@ function renderRecTab() {
       </div>
       <div class="msg" id="recFormMsg"></div>
     </div>
+    ${[
+      {k:'literary',icon:'📖',label:'严肃文学'},
+      {k:'popular',icon:'📚',label:'流行文学'},
+      {k:'lightnovel',icon:'📙',label:'轻小说'},
+      {k:'manga',icon:'📘',label:'漫画'},
+      {k:'movie',icon:'🎬',label:'电影'},
+      {k:'drama',icon:'📺',label:'电视剧'},
+      {k:'anime',icon:'🎞️',label:'动画'},
+      {k:'music',icon:'🎵',label:'音乐'}
+    ].map(c => `
     <div style="margin-top:1rem;">
-      <h4 style="font-size:0.9rem;color:var(--accent);margin-bottom:0.4rem;">📚 书籍</h4>
-      <div class="admin-item-list" id="recBooksList"></div>
-    </div>
-    <div style="margin-top:1rem;">
-      <h4 style="font-size:0.9rem;color:var(--accent);margin-bottom:0.4rem;">🎵 音乐</h4>
-      <div class="admin-item-list" id="recMusicList"></div>
-    </div>
-    <div style="margin-top:1rem;">
-      <h4 style="font-size:0.9rem;color:var(--accent);margin-bottom:0.4rem;">🎬 影视</h4>
-      <div class="admin-item-list" id="recFilmsList"></div>
-    </div>`;
+      <h4 style="font-size:0.9rem;color:var(--accent);margin-bottom:0.4rem;">${c.icon} ${c.label}</h4>
+      <div class="admin-item-list" id="rec-${c.k}-list"></div>
+    </div>`).join('')}
+    `;
   renderRecLists();
 }
-
-window.onRecCatChange = function() {
-  const label = document.querySelector('#recAuthorRow label');
-  const cat = document.getElementById('recCat').value;
-  if (cat === 'books') label.textContent = '作者';
-  else if (cat === 'music') label.textContent = '艺术家';
-  else label.textContent = '导演';
-};
 
 window.saveRec = function() {
   const id = editingRecId || Store.genId();
@@ -567,20 +562,18 @@ window.saveRec = function() {
     excerpt: document.getElementById('recExcerpt').value.trim(),
     review: document.getElementById('recReview').value.trim(),
     year: document.getElementById('recYear').value.trim(),
-    title: document.getElementById('recTitle').value.trim()
+    title: document.getElementById('recTitle').value.trim(),
+    creator: document.getElementById('recAuthor').value.trim()
   };
-  const authorVal = document.getElementById('recAuthor').value.trim();
-  if (cat === 'books') item.author = authorVal;
-  else if (cat === 'music') item.artist = authorVal;
-  else item.director = authorVal;
 
   if (!item.title) { showFormMsg('recFormMsg','请填写标题','error'); return; }
+  const ALL_CATS = ['literary','popular','lightnovel','manga','movie','drama','anime','music'];
   let all = Store.getRecommendations();
   if (editingRecId) {
-    for (const k of ['books','music','films']) all[k] = all[k].filter(i => i.id !== editingRecId);
-    all[cat] = [item, ...all[cat]];
+    for (const k of ALL_CATS) all[k] = all[k].filter(i => i.id !== editingRecId);
+    all[cat] = [item, ...(all[cat] || [])];
   } else {
-    all[cat] = [item, ...all[cat]];
+    all[cat] = [item, ...(all[cat] || [])];
   }
   Store.setRecommendations(all);
   window.cancelRec();
@@ -589,9 +582,10 @@ window.saveRec = function() {
 
 window.editRec = function(id) {
   let item = null, cat = '';
+  const ALL_CATS = ['literary','popular','lightnovel','manga','movie','drama','anime','music'];
   const all = Store.getRecommendations();
-  for (const k of ['books','music','films']) {
-    const found = all[k].find(i => i.id === id);
+  for (const k of ALL_CATS) {
+    const found = (all[k] || []).find(i => i.id === id);
     if (found) { item = found; cat = k; break; }
   }
   if (!item) return;
@@ -599,9 +593,8 @@ window.editRec = function(id) {
   document.getElementById('recFormTitle').textContent = '编辑推荐帖';
   document.getElementById('recId').value = id;
   document.getElementById('recCat').value = cat;
-  window.onRecCatChange();
   document.getElementById('recTitle').value = item.title || '';
-  document.getElementById('recAuthor').value = item.author || item.artist || item.director || '';
+  document.getElementById('recAuthor').value = item.creator || '';
   document.getElementById('recYear').value = item.year || '';
   document.getElementById('recCover').value = item.cover || '';
   document.getElementById('recExcerpt').value = item.excerpt || '';
@@ -611,8 +604,9 @@ window.editRec = function(id) {
 
 window.deleteRec = function(id) {
   if (!confirm('确认删除？')) return;
+  const ALL_CATS = ['literary','popular','lightnovel','manga','movie','drama','anime','music'];
   let all = Store.getRecommendations();
-  for (const k of ['books','music','films']) all[k] = all[k].filter(i => i.id !== id);
+  for (const k of ALL_CATS) all[k] = (all[k] || []).filter(i => i.id !== id);
   Store.setRecommendations(all);
   if (editingRecId === id) window.cancelRec();
   renderRecLists();
@@ -633,17 +627,19 @@ window.cancelRec = function() {
 
 function renderRecLists() {
   const all = Store.getRecommendations();
-  const renderItems = (items) => items.length ? items.map(i => `
+  const renderItems = (items) => (items||[]).length ? items.map(i => `
     <div class="admin-item-row">
-      <div class="info"><div class="name">${escHtml(i.title)}</div><div class="meta">${escHtml(i.author||i.artist||i.director||'')} ${i.year||''}</div></div>
+      <div class="info"><div class="name">${escHtml(i.title)}</div><div class="meta">${escHtml(i.creator||'')} ${i.year||''}</div></div>
       <div class="actions">
         <button class="admin-btn outline sm" onclick="window.editRec('${i.id}')">编辑</button>
         <button class="admin-btn danger sm" onclick="window.deleteRec('${i.id}')">删除</button>
       </div>
     </div>`).join('') : '<p style="color:var(--text-muted);font-size:0.85rem;">暂无</p>';
-  const b = document.getElementById('recBooksList'); if (b) b.innerHTML = renderItems(all.books);
-  const m = document.getElementById('recMusicList'); if (m) m.innerHTML = renderItems(all.music);
-  const f = document.getElementById('recFilmsList'); if (f) f.innerHTML = renderItems(all.films);
+  const cats = ['literary','popular','lightnovel','manga','movie','drama','anime','music'];
+  cats.forEach(cat => {
+    const el = document.getElementById('rec-' + cat + '-list');
+    if (el) el.innerHTML = renderItems(all[cat] || []);
+  });
 }
 
 // ═══════════════════════════════════════════════════════

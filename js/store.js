@@ -54,11 +54,20 @@ const Store = (() => {
     return {
       literature: over.literature || publishedData.literature,
       projects: over.projects || publishedData.projects,
-      recommendations: over.recommendations ? {
-        books: over.recommendations.books || publishedData.recommendations?.books || [],
-        music: over.recommendations.music || publishedData.recommendations?.music || [],
-        films: over.recommendations.films || publishedData.recommendations?.films || []
-      } : (publishedData.recommendations || { books:[], music:[], films:[] }),
+      recommendations: over.recommendations ? mergeRecs(over.recommendations, publishedData.recommendations) : (publishedData.recommendations || getEmptyRecs()),
+
+function mergeRecs(over, pub) {
+  const cats = ['literary','popular','lightnovel','manga','movie','drama','anime','music'];
+  const result = {};
+  cats.forEach(c => { result[c] = over[c] || (pub && pub[c]) || []; });
+  return result;
+}
+function getEmptyRecs() {
+  const cats = ['literary','popular','lightnovel','manga','movie','drama','anime','music'];
+  const result = {};
+  cats.forEach(c => { result[c] = []; });
+  return result;
+}
       comments: over.comments || publishedData.comments || {},
       users: over.users || publishedData.users || [],
       siteTitle: over.siteTitle || publishedData.siteTitle || 'MYGO-MUJICA-WEB',
@@ -71,7 +80,7 @@ const Store = (() => {
     return {
       literature: [],
       projects: [],
-      recommendations: { books:[], music:[], films:[] },
+      recommendations: getEmptyRecs(),
       comments: {},
       users: [],
       siteTitle: 'MYGO-MUJICA-WEB',
@@ -209,7 +218,7 @@ const Store = (() => {
   function getProjById(id) { return getData().projects.find(i => i.id === id) || null; }
   function getRecById(id) {
     const all = getData().recommendations;
-    for (const k of ['books', 'music', 'films']) {
+    for (const k of ['literary','popular','lightnovel','manga','movie','drama','anime','music']) {
       const found = all[k].find(i => i.id === id);
       if (found) return { cat: k, item: found };
     }

@@ -21,11 +21,7 @@
       "name": "项目名称",
       "desc": "这是一个示例项目的简短描述。",
       "detail": "项目的详细介绍，说明技术选型、架构设计等。",
-      "tags": [
-        "HTML",
-        "CSS",
-        "JavaScript"
-      ],
+      "tags": ["HTML", "CSS", "JavaScript"],
       "link": ""
     },
     {
@@ -33,54 +29,97 @@
       "name": "另一个项目",
       "desc": "用代码构建有趣的东西。",
       "detail": "更详细的项目说明。",
-      "tags": [
-        "Python",
-        "Flask"
-      ],
+      "tags": ["Python", "Flask"],
       "link": ""
     }
   ],
   "recommendations": {
-    "books": [
-      {
-        "id": "mpws9dcieqmxh",
-        "cover": "",
-        "excerpt": "",
-        "review": "改变我青春的一部作品",
-        "year": "2021",
-        "title": "赛马娘2",
-        "author": "cyp"
-      },
+    "literary": [
       {
         "id": "1",
-        "title": "书名",
-        "author": "作者",
+        "title": "示例：严肃文学作品",
+        "creator": "作者",
         "year": "2024",
         "cover": "",
-        "review": "这是一篇完整的推荐帖正文。这里写下对这本书的深入评价、读后感、以及推荐理由。",
-        "excerpt": "在这里写下你对这本书的推荐理由。"
+        "review": "在这里写下对这部严肃文学作品的深入分析和推荐理由。",
+        "excerpt": "一部值得深入阅读的严肃文学作品。"
+      }
+    ],
+    "popular": [
+      {
+        "id": "2",
+        "title": "示例：流行文学作品",
+        "creator": "作者",
+        "year": "2023",
+        "cover": "",
+        "review": "流行文学也能有深度。",
+        "excerpt": "大众阅读中的佳作。"
+      }
+    ],
+    "lightnovel": [
+      {
+        "id": "3",
+        "title": "示例：轻小说作品",
+        "creator": "作者",
+        "year": "2024",
+        "cover": "",
+        "review": "轻小说不只是轻松阅读。",
+        "excerpt": "轻松阅读中的惊喜之作。"
+      }
+    ],
+    "manga": [
+      {
+        "id": "4",
+        "title": "示例：漫画作品",
+        "creator": "作者",
+        "year": "2023",
+        "cover": "",
+        "review": "漫画作为第九艺术的魅力。",
+        "excerpt": "画面与叙事完美结合的漫画作品。"
+      }
+    ],
+    "movie": [
+      {
+        "id": "5",
+        "title": "示例：电影作品",
+        "creator": "导演",
+        "year": "2024",
+        "cover": "",
+        "review": "银幕上那些难忘的故事。",
+        "excerpt": "一部值得在大银幕上观看的电影。"
+      }
+    ],
+    "drama": [
+      {
+        "id": "6",
+        "title": "示例：电视剧作品",
+        "creator": "导演",
+        "year": "2023",
+        "cover": "",
+        "review": "一部让人欲罢不能的剧集。",
+        "excerpt": "值得一追的好剧。"
+      }
+    ],
+    "anime": [
+      {
+        "id": "mpws9dcieqmxh",
+        "title": "赛马娘2",
+        "creator": "cyp",
+        "year": "2021",
+        "cover": "",
+        "review": "改变我青春的一部作品",
+        "excerpt": ""
       }
     ],
     "music": [
       {
-        "id": "1",
-        "title": "歌曲 / 专辑",
-        "artist": "艺术家",
+        "id": "7",
+        "title": "示例：音乐专辑",
+        "creator": "艺术家",
         "year": "2024",
         "cover": "",
-        "review": "详细乐评正文，谈谈这张专辑为什么会打动你。",
-        "excerpt": "音乐带来的感动值得被记录和分享。"
-      }
-    ],
-    "films": [
-      {
-        "id": "1",
-        "title": "作品名",
-        "director": "导演",
-        "year": "2023",
-        "cover": "",
-        "review": "完整的影评正文，分析镜头语言、叙事结构、主题表达。",
-        "excerpt": "银幕上那些难忘的故事。"
+        "review": "一张值得反复聆听的专辑。",
+        "excerpt": "动人的旋律，深刻的歌词。"
       }
     ]
   },
