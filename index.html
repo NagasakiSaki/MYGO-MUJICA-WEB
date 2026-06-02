@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div class="reading-progress" id="progressBar"></div>
 
 <header class="site-header">
   <div class="header-inner">
@@ -54,6 +55,15 @@
 <div class="modal-overlay" id="authModal">
   <div class="modal-box" id="authModalBox"></div>
 </div>
+
+<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="搜索文章、项目、推荐..." oninput="doSearch(this.value)" autocomplete="off">
+    <div id="searchResults"><div class="search-hint">输入关键词搜索...</div></div>
+  </div>
+</div>
+
+<button class="back-to-top" id="backToTop" title="回到顶部">↑</button>
 
 <script src="js/store.js"></script>
 <script src="js/main.js"></script>

@@ -5,27 +5,87 @@ let editingLitId = null;
 let editingProjId = null;
 let editingRecId = null;
 
-// ── Login ────────────────────────────────────────────
+// ── Login & Auth ──────────────────────────────────────
 function checkAuth() {
   const pw = Store.getAdminPassword();
-  if (!pw) return true; // no password set, allow entry
+  if (!pw) return false; // no password set yet → show setup
   return sessionStorage.getItem('mygo_auth') === '1';
 }
 
+function showLoginForm() {
+  document.getElementById('loginSetup').style.display = 'none';
+  document.getElementById('loginNormal').style.display = '';
+  document.getElementById('loginForgot').style.display = 'none';
+  document.getElementById('loginPw').value = '';
+  clearMsg('loginMsg');
+}
+
+function showSetupForm() {
+  document.getElementById('loginSetup').style.display = '';
+  document.getElementById('loginNormal').style.display = 'none';
+  document.getElementById('loginForgot').style.display = 'none';
+  document.getElementById('setupPw').value = '';
+  document.getElementById('setupPw2').value = '';
+  clearMsg('setupMsg');
+}
+
+function showForgotPw() {
+  document.getElementById('loginSetup').style.display = 'none';
+  document.getElementById('loginNormal').style.display = 'none';
+  document.getElementById('loginForgot').style.display = '';
+  clearMsg('forgotMsg');
+}
+
+function clearMsg(id) {
+  const el = document.getElementById(id);
+  if (el) { el.textContent = ''; el.className = 'msg'; }
+}
+
+function setMsg(id, text, type) {
+  const el = document.getElementById(id);
+  if (el) { el.textContent = text; el.className = 'msg ' + type; }
+}
+
+// First-time setup: require password + confirmation
+function doSetupPassword() {
+  const pw = document.getElementById('setupPw').value;
+  const pw2 = document.getElementById('setupPw2').value;
+  if (!pw || pw.length < 4) {
+    setMsg('setupMsg', '密码至少需要4个字符', 'error');
+    return;
+  }
+  if (pw !== pw2) {
+    setMsg('setupMsg', '两次输入的密码不一致', 'error');
+    return;
+  }
+  Store.setAdminPassword(pw);
+  sessionStorage.setItem('mygo_auth', '1');
+  showMain();
+}
+
+// Normal login
 function doLogin() {
-  const input = document.getElementById('loginPw').value.trim();
+  const input = document.getElementById('loginPw').value;
   const current = Store.getAdminPassword();
-  if (!current) {
-    Store.setAdminPassword(input);
-    sessionStorage.setItem('mygo_auth', '1');
-    showMain();
-  } else if (input === current) {
+  if (!input) {
+    setMsg('loginMsg', '请输入密码', 'error');
+    return;
+  }
+  if (input === current) {
     sessionStorage.setItem('mygo_auth', '1');
     showMain();
   } else {
-    document.getElementById('loginHint').textContent = '密码错误，请重试';
-    document.getElementById('loginHint').style.color = '#c62828';
+    setMsg('loginMsg', '密码错误，请重试', 'error');
   }
+}
+
+// Reset password (only clears admin password, preserves all content)
+function doResetPassword() {
+  if (!confirm('确认要重置管理密码吗？\n\n你的文章、项目、推荐等数据不会被删除。重置后需要重新设置密码。')) return;
+  Store.setAdminPassword('');
+  sessionStorage.removeItem('mygo_auth');
+  showSetupForm();
+  setMsg('setupMsg', '密码已重置，请设置新密码', 'success');
 }
 
 function doLogout() {
@@ -39,9 +99,16 @@ function showMain() {
   renderAll();
 }
 
-// ── Tabs ─────────────────────────────────────────────
+// ── Page init ─────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  if (checkAuth()) showMain();
+  const hasPw = Store.getAdminPassword();
+  if (checkAuth()) {
+    showMain();
+  } else if (!hasPw) {
+    showSetupForm();
+  } else {
+    showLoginForm();
+  }
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
@@ -318,10 +385,18 @@ function saveSite() {
   alert('网站设置已保存');
 }
 function changePassword() {
-  const pw = document.getElementById('newPassword').value.trim();
-  if (!pw) return;
-  Store.setAdminPassword(pw);
+  const oldPw = document.getElementById('oldPassword').value;
+  const newPw = document.getElementById('newPassword').value;
+  const newPw2 = document.getElementById('newPassword2').value;
+
+  if (oldPw !== Store.getAdminPassword()) { alert('当前密码不正确'); return; }
+  if (!newPw || newPw.length < 4) { alert('新密码至少需要4个字符'); return; }
+  if (newPw !== newPw2) { alert('两次输入的新密码不一致'); return; }
+
+  Store.setAdminPassword(newPw);
+  document.getElementById('oldPassword').value = '';
   document.getElementById('newPassword').value = '';
+  document.getElementById('newPassword2').value = '';
   alert('密码已修改');
 }
 

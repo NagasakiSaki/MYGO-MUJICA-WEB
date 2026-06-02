@@ -75,10 +75,34 @@
 </header>
 
 <div id="loginSection" class="login-box">
-  <h2>管理后台登录</h2>
-  <input type="password" id="loginPw" placeholder="输入密码">
-  <div class="hint" id="loginHint">首次使用请直接设置密码</div>
-  <button class="btn btn-primary" onclick="doLogin()" style="width:100%">进入</button>
+  <!-- First-time setup: no password yet -->
+  <div id="loginSetup">
+    <h2>设置管理密码</h2>
+    <div class="msg" id="setupMsg"></div>
+    <input type="password" id="setupPw" placeholder="输入密码（至少4位）">
+    <input type="password" id="setupPw2" placeholder="再次输入密码">
+    <button class="btn btn-primary" onclick="doSetupPassword()" style="width:100%">设置密码并进入</button>
+  </div>
+  <!-- Normal login -->
+  <div id="loginNormal" style="display:none;">
+    <h2>管理后台登录</h2>
+    <div class="msg" id="loginMsg"></div>
+    <input type="password" id="loginPw" placeholder="输入密码">
+    <button class="btn btn-primary" onclick="doLogin()" style="width:100%">进入</button>
+    <p style="margin-top:0.8rem;font-size:0.85rem;color:var(--text-muted);">
+      <a href="#" onclick="showForgotPw()" style="color:var(--danger);">忘记密码？</a>
+    </p>
+  </div>
+  <!-- Forgot password -->
+  <div id="loginForgot" style="display:none;">
+    <h2>重置管理密码</h2>
+    <div class="msg" id="forgotMsg"></div>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
+      重置密码不会清除你的内容数据（文章、项目、推荐等），仅清除管理密码。重置后需要重新设置密码。
+    </p>
+    <button class="btn btn-primary" onclick="doResetPassword()" style="width:100%;background:var(--danger);margin-bottom:0.5rem;">确认重置密码</button>
+    <button class="btn btn-outline" onclick="showLoginForm()" style="width:100%;">返回登录</button>
+  </div>
 </div>
 
 <div id="mainSection" class="container" style="display:none">
@@ -158,7 +182,9 @@
     </div>
     <div class="form-section">
       <h3>修改密码</h3>
-      <div class="form-row"><label>新密码 (留空则不修改)</label><input type="password" id="newPassword"></div>
+      <div class="form-row"><label>当前密码</label><input type="password" id="oldPassword"></div>
+      <div class="form-row"><label>新密码（至少4位）</label><input type="password" id="newPassword"></div>
+      <div class="form-row"><label>确认新密码</label><input type="password" id="newPassword2"></div>
       <div class="form-actions"><button class="btn btn-primary" onclick="changePassword()">修改密码</button></div>
     </div>
   </div>
