@@ -70,6 +70,8 @@ function getEmptyRecs() {
 }
       comments: over.comments || publishedData.comments || {},
       users: over.users || publishedData.users || [],
+      notifications: over.notifications || publishedData.notifications || {},
+      likes: over.likes || publishedData.likes || {},
       siteTitle: over.siteTitle || publishedData.siteTitle || 'MYGO-MUJICA-WEB',
       siteSubtitle: over.siteSubtitle || publishedData.siteSubtitle || '',
       adminPassword: over.adminPassword || ''
@@ -105,7 +107,8 @@ function getEmptyRecs() {
     return hash.toString(36);
   }
 
-  // ── Users ─────────────────────────────
+  // ── Users & Roles ──────────────────────
+  // role: 'user' | 'admin' | 'moderator'
   function getUsers() { return getData().users; }
   function setUsers(users) {
     const over = getAdminOverrides();
@@ -113,7 +116,7 @@ function getEmptyRecs() {
     saveAdminOverrides(over);
   }
 
-  function register(username, password) {
+  function register(username, password, opts = {}) {
     if (!username || !password) return { ok: false, msg: '用户名和密码不能为空' };
     if (username.length < 2) return { ok: false, msg: '用户名至少2个字符' };
     if (password.length < 3) return { ok: false, msg: '密码至少3个字符' };
@@ -121,7 +124,16 @@ function getEmptyRecs() {
     if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
       return { ok: false, msg: '用户名已存在' };
     }
-    users.push({ username, passwordHash: hashPw(password) });
+    const user = {
+      username,
+      passwordHash: hashPw(password),
+      nickname: (opts.nickname || username).trim(),
+      avatar: (opts.avatar || '').trim(),
+      role: opts.role || 'user',
+      bannedUntil: null,
+      mutedUntil: null
+    };
+    users.push(user);
     setUsers(users);
     return { ok: true };
   }
@@ -131,13 +143,255 @@ function getEmptyRecs() {
     const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
     if (!user) return { ok: false, msg: '用户不存在' };
     if (user.passwordHash !== hashPw(password)) return { ok: false, msg: '密码错误' };
-    sessionStorage.setItem(USER_SESSION, user.username);
-    return { ok: true, username: user.username };
+    // Check ban
+    if (user.bannedUntil && new Date(user.bannedUntil) > new Date()) {
+      return { ok: false, msg: '账号已被封禁至 ' + new Date(user.bannedUntil).toLocaleDateString() };
+    }
+    const session = {
+      username: user.username,
+      nickname: user.nickname || user.username,
+      avatar: user.avatar || '',
+      role: user.role || 'user'
+    };
+    sessionStorage.setItem(USER_SESSION, JSON.stringify(session));
+    return { ok: true, username: session.username, nickname: session.nickname, avatar: session.avatar, role: session.role };
   }
 
   function logout() { sessionStorage.removeItem(USER_SESSION); }
-  function getCurrentUser() { return sessionStorage.getItem(USER_SESSION) || null; }
+
+  function getCurrentUser() {
+    const raw = sessionStorage.getItem(USER_SESSION);
+    return raw ? JSON.parse(raw).username : null;
+  }
+
+  function getCurrentUserInfo() {
+    const raw = sessionStorage.getItem(USER_SESSION);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch(e) { return null; }
+  }
+
   function isLoggedIn() { return !!sessionStorage.getItem(USER_SESSION); }
+
+  // Role checks
+  function isModerator() {
+    const info = getCurrentUserInfo();
+    return info ? info.role === 'moderator' : false;
+  }
+  function isAdmin() {
+    const info = getCurrentUserInfo();
+    return info ? (info.role === 'admin' || info.role === 'moderator') : false;
+  }
+  function isAdminLoggedIn() { return isAdmin(); }
+
+  function updateProfile(username, data) {
+    const users = getUsers();
+    const idx = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
+    if (idx === -1) return { ok: false, msg: '用户不存在' };
+    if (data.nickname !== undefined) users[idx].nickname = data.nickname.trim();
+    if (data.avatar !== undefined) users[idx].avatar = data.avatar.trim();
+    setUsers(users);
+    const raw = sessionStorage.getItem(USER_SESSION);
+    if (raw) {
+      const sess = JSON.parse(raw);
+      if (sess.username === username) {
+        if (data.nickname !== undefined) sess.nickname = data.nickname.trim();
+        if (data.avatar !== undefined) sess.avatar = data.avatar.trim();
+        sessionStorage.setItem(USER_SESSION, JSON.stringify(sess));
+      }
+    }
+    return { ok: true };
+  }
+
+  // ── Ban / Mute ─────────────────────────
+  function banUser(username, until) {
+    const users = getUsers();
+    const u = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!u) return { ok: false, msg: '用户不存在' };
+    if (u.role === 'moderator') return { ok: false, msg: '不能封禁版主' };
+    if (u.role === 'admin' && !isModerator()) return { ok: false, msg: '只有版主可以封禁管理员' };
+    u.bannedUntil = until || null;
+    setUsers(users);
+    return { ok: true };
+  }
+  function unbanUser(username) {
+    return banUser(username, null);
+  }
+  function muteUser(username, until) {
+    const users = getUsers();
+    const u = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!u) return { ok: false, msg: '用户不存在' };
+    if (u.role === 'moderator') return { ok: false, msg: '不能禁言版主' };
+    if (u.role === 'admin' && !isModerator()) return { ok: false, msg: '只有版主可以禁言管理员' };
+    u.mutedUntil = until || null;
+    setUsers(users);
+    return { ok: true };
+  }
+  function unmuteUser(username) {
+    return muteUser(username, null);
+  }
+  function isUserMuted(username) {
+    const users = getUsers();
+    const u = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!u || !u.mutedUntil) return false;
+    return new Date(u.mutedUntil) > new Date();
+  }
+  function isUserBanned(username) {
+    const users = getUsers();
+    const u = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!u || !u.bannedUntil) return false;
+    return new Date(u.bannedUntil) > new Date();
+  }
+
+  // Moderator auth
+  function moderatorLogin(username, password) {
+    const users = getUsers();
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!user) return { ok: false, msg: '用户不存在' };
+    if (user.role !== 'moderator') return { ok: false, msg: '该用户不是版主' };
+    if (user.passwordHash !== hashPw(password)) return { ok: false, msg: '密码错误' };
+    const session = {
+      username: user.username,
+      nickname: user.nickname || user.username,
+      avatar: user.avatar || '',
+      role: 'moderator'
+    };
+    sessionStorage.setItem(USER_SESSION, JSON.stringify(session));
+    return { ok: true, username: session.username, nickname: session.nickname, avatar: session.avatar };
+  }
+  function registerModerator(username, password, opts = {}) {
+    if (!isModerator()) {
+      const existingMods = getUsers().filter(u => u.role === 'moderator');
+      if (existingMods.length > 0) return { ok: false, msg: '只有版主可以添加版主' };
+    }
+    return register(username, password, { ...opts, role: 'moderator' });
+  }
+
+  // Admin auth
+  function adminLoginUser(username, password) {
+    const users = getUsers();
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!user) return { ok: false, msg: '用户不存在' };
+    if (user.role !== 'admin' && user.role !== 'moderator') return { ok: false, msg: '该用户不是管理员或版主' };
+    if (user.passwordHash !== hashPw(password)) return { ok: false, msg: '密码错误' };
+    const session = {
+      username: user.username,
+      nickname: user.nickname || user.username,
+      avatar: user.avatar || '',
+      role: user.role
+    };
+    sessionStorage.setItem(USER_SESSION, JSON.stringify(session));
+    return { ok: true, username: session.username, nickname: session.nickname, avatar: session.avatar, role: session.role };
+  }
+  function registerAdmin(username, password, opts = {}) {
+    // Only moderator can create admin accounts
+    if (!isModerator()) {
+      const existing = getUsers().filter(u => u.role === 'admin' || u.role === 'moderator');
+      if (existing.length > 0) return { ok: false, msg: '只有版主可以创建管理员账号。管理员需从普通用户中提拔。' };
+    }
+    return register(username, password, { ...opts, role: 'admin' });
+  }
+
+  // ── Promote / Demote ────────────────────
+  function promoteToAdmin(username) {
+    if (!isModerator()) return { ok: false, msg: '只有版主可以提拔管理员' };
+    const users = getUsers();
+    const u = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!u) return { ok: false, msg: '用户不存在' };
+    if (u.role !== 'user') return { ok: false, msg: '只能提拔普通用户为管理员' };
+    u.role = 'admin';
+    setUsers(users);
+    addNotification(username, '你已被版主提拔为管理员！现在可以管理用户评论、禁言和封禁了。');
+    return { ok: true };
+  }
+
+  function demoteFromAdmin(username) {
+    if (!isModerator()) return { ok: false, msg: '只有版主可以贬黜管理员' };
+    const users = getUsers();
+    const u = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!u) return { ok: false, msg: '用户不存在' };
+    if (u.role !== 'admin') return { ok: false, msg: '该用户不是管理员' };
+    u.role = 'user';
+    setUsers(users);
+    addNotification(username, '你已被版主取消管理员身份。');
+    return { ok: true };
+  }
+
+  // ── Notifications ───────────────────────
+  function getNotifications(username) {
+    const all = getData().notifications || {};
+    return all[username] || [];
+  }
+
+  function addNotification(username, message) {
+    const over = getAdminOverrides();
+    if (!over.notifications) over.notifications = {};
+    if (!over.notifications[username]) over.notifications[username] = [];
+    over.notifications[username].push({
+      id: genId(),
+      message,
+      date: new Date().toISOString().slice(0, 10),
+      read: false
+    });
+    saveAdminOverrides(over);
+  }
+
+  function markNotificationsRead(username) {
+    const over = getAdminOverrides();
+    if (!over.notifications) return;
+    const notifs = over.notifications[username] || [];
+    notifs.forEach(n => n.read = true);
+    saveAdminOverrides(over);
+  }
+
+  function unreadNotificationCount(username) {
+    return getNotifications(username).filter(n => !n.read).length;
+  }
+
+  // Also send notifications on mute/unmute/ban/unban
+  const _origMuteUser = muteUser;
+  muteUser = function(username, until) {
+    const result = _origMuteUser(username, until);
+    if (result.ok) {
+      if (until) addNotification(username, '你已被禁言' + (until.includes('2999') ? '（永久）' : '至 ' + new Date(until).toLocaleDateString()) + '。');
+      else addNotification(username, '你的禁言已被解除。');
+    }
+    return result;
+  };
+
+  const _origBanUser = banUser;
+  banUser = function(username, until) {
+    const result = _origBanUser(username, until);
+    if (result.ok) {
+      if (until) addNotification(username, '你已被封禁' + (until.includes('2999') ? '（永久）' : '至 ' + new Date(until).toLocaleDateString()) + '。');
+      else addNotification(username, '你的封禁已被解除。');
+    }
+    return result;
+  };
+
+  // Legacy admin password (backward compat)
+  function getAdminPassword() { return getData().adminPassword; }
+  function setAdminPassword(pw) {
+    const over = getAdminOverrides();
+    over.adminPassword = pw;
+    saveAdminOverrides(over);
+  }
+  function adminLogin(pw) {
+    const current = getAdminPassword();
+    if (!pw || pw !== current) return false;
+    sessionStorage.setItem(USER_SESSION, JSON.stringify({
+      username: '_admin_', nickname: '管理员', avatar: '', role: 'admin'
+    }));
+    return true;
+  }
+  function adminLogout() {}
+
+  // Getters for lists
+  function getModerators() {
+    return getUsers().filter(u => u.role === 'moderator');
+  }
+  function getAdmins() {
+    return getUsers().filter(u => u.role === 'admin' || u.role === 'moderator');
+  }
 
   // ── Admin auth ────────────────────────
   function getAdminPassword() { return getData().adminPassword; }
@@ -146,15 +400,50 @@ function getEmptyRecs() {
     over.adminPassword = pw;
     saveAdminOverrides(over);
   }
-  function isAdminLoggedIn() { return sessionStorage.getItem('mygo_admin_auth') === '1'; }
+  // New: admin check based on user session isAdmin flag
+  function isAdminLoggedIn() {
+    const info = getCurrentUserInfo();
+    return info ? info.isAdmin : false;
+  }
+  // Legacy password login (kept for backward compat)
   function adminLogin(pw) {
     const current = getAdminPassword();
     if (!pw || pw !== current) return false;
-    sessionStorage.setItem('mygo_admin_auth', '1');
+    // If using legacy password, we need to create a session with isAdmin
+    sessionStorage.setItem(USER_SESSION, JSON.stringify({
+      username: '_admin_',
+      nickname: '管理员',
+      avatar: '',
+      isAdmin: true
+    }));
     return true;
   }
+  // New: admin login via username/password (user must have isAdmin flag)
+  function adminLoginUser(username, password) {
+    const users = getUsers();
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!user) return { ok: false, msg: '用户不存在' };
+    if (!user.isAdmin) return { ok: false, msg: '该用户不是管理员' };
+    if (user.passwordHash !== hashPw(password)) return { ok: false, msg: '密码错误' };
+    sessionStorage.setItem(USER_SESSION, JSON.stringify({
+      username: user.username,
+      nickname: user.nickname || user.username,
+      avatar: user.avatar || '',
+      isAdmin: true
+    }));
+    return { ok: true, username: user.username, nickname: user.nickname, avatar: user.avatar };
+  }
+  // Register a new admin (requires existing admin to be logged in, or first setup)
+  function registerAdmin(username, password, opts = {}) {
+    // Allow registration if no admins exist yet (first setup after key verification)
+    const existingAdmins = getUsers().filter(u => u.isAdmin);
+    if (existingAdmins.length > 0 && !isAdminLoggedIn()) {
+      return { ok: false, msg: '只有管理员可以添加新管理员' };
+    }
+    return register(username, password, { ...opts, isAdmin: true });
+  }
   function adminLogout() {
-    sessionStorage.removeItem('mygo_admin_auth');
+    // Just logout for admin - handled by regular logout
   }
 
   // ── Comments ──────────────────────────
@@ -164,19 +453,25 @@ function getEmptyRecs() {
     return getData().comments[commentKey(type, id)] || [];
   }
 
-  function addComment(type, id, content, rating) {
-    const user = getCurrentUser();
-    if (!user) return { ok: false, msg: '请先登录' };
+  function addComment(type, id, content, rating, parentId = null) {
+    const info = getCurrentUserInfo();
+    if (!info) return { ok: false, msg: '请先登录' };
+    if (isUserMuted(info.username)) return { ok: false, msg: '你已被禁言，无法评论' };
     if (!content.trim()) return { ok: false, msg: '评论内容不能为空' };
-    const r = parseFloat(rating);
-    if (isNaN(r) || r < 0 || r > 10) return { ok: false, msg: '评分需在 0.0 — 10.0 之间' };
+    if (!parentId) {
+      const r = parseFloat(rating);
+      if (isNaN(r) || r < 0 || r > 10) return { ok: false, msg: '评分需在 0.0 — 10.0 之间' };
+    }
 
     const comment = {
       id: genId(),
-      author: user,
+      parentId: parentId || null,
+      author: info.username,
+      authorNickname: info.nickname || info.username,
+      authorAvatar: info.avatar || '',
       content: content.trim(),
       date: new Date().toISOString().slice(0, 10),
-      rating: Math.round(r * 10) / 10
+      rating: parentId ? 0 : (Math.round((parseFloat(rating) || 0) * 10) / 10)
     };
     const key = commentKey(type, id);
     const over = getAdminOverrides();
@@ -188,14 +483,17 @@ function getEmptyRecs() {
   }
 
   function deleteComment(type, itemId, commentId) {
-    const user = getCurrentUser();
-    if (!user) return { ok: false, msg: '请先登录' };
+    const info = getCurrentUserInfo();
+    if (!info) return { ok: false, msg: '请先登录' };
     const key = commentKey(type, itemId);
     const over = getAdminOverrides();
     if (!over.comments || !over.comments[key]) return { ok: false, msg: '评论不存在' };
     const idx = over.comments[key].findIndex(c => c.id === commentId);
     if (idx === -1) return { ok: false, msg: '评论不存在' };
-    if (over.comments[key][idx].author !== user) return { ok: false, msg: '只能删除自己的评论' };
+    // Author can delete own, admin/moderator can delete any
+    const isAuthor = over.comments[key][idx].author === info.username;
+    const isPowerUser = info.role === 'admin' || info.role === 'moderator';
+    if (!isAuthor && !isPowerUser) return { ok: false, msg: '只能删除自己的评论' };
     over.comments[key].splice(idx, 1);
     saveAdminOverrides(over);
     return { ok: true };
@@ -206,6 +504,40 @@ function getEmptyRecs() {
     if (!comments.length) return 0;
     const sum = comments.reduce((s, c) => s + (c.rating || 0), 0);
     return Math.round((sum / comments.length) * 10) / 10;
+  }
+
+  // ── Likes ─────────────────────────────
+  function toggleLike(type, id) {
+    const info = getCurrentUserInfo();
+    if (!info) return { ok: false, msg: '请先登录' };
+    const key = type + '-' + id;
+    const over = getAdminOverrides();
+    if (!over.likes) over.likes = {};
+    if (!over.likes[key]) over.likes[key] = [];
+    const idx = over.likes[key].indexOf(info.username);
+    if (idx === -1) {
+      over.likes[key].push(info.username);
+      saveAdminOverrides(over);
+      return { ok: true, liked: true };
+    } else {
+      over.likes[key].splice(idx, 1);
+      saveAdminOverrides(over);
+      return { ok: true, liked: false };
+    }
+  }
+
+  function hasLiked(type, id) {
+    const info = getCurrentUserInfo();
+    if (!info) return false;
+    const key = type + '-' + id;
+    const likes = getData().likes || {};
+    return (likes[key] || []).includes(info.username);
+  }
+
+  function getLikeCount(type, id) {
+    const key = type + '-' + id;
+    const likes = getData().likes || {};
+    return (likes[key] || []).length;
   }
 
   // ── Content getters ───────────────────
@@ -257,6 +589,8 @@ function getEmptyRecs() {
       recommendations: d.recommendations,
       comments: d.comments,
       users: d.users,
+      notifications: d.notifications,
+      likes: d.likes,
       siteTitle: d.siteTitle,
       siteSubtitle: d.siteSubtitle
     };
@@ -265,11 +599,21 @@ function getEmptyRecs() {
   return {
     genId, onReady,
     // Users & Auth
-    register, login, logout, getCurrentUser, isLoggedIn,
-    // Admin
-    getAdminPassword, setAdminPassword, isAdminLoggedIn, adminLogin, adminLogout,
+    register, login, logout, getCurrentUser, getCurrentUserInfo, isLoggedIn,
+    updateProfile, getUsers, getAdmins, getModerators, setUsers,
+    isModerator, isAdmin, isAdminLoggedIn,
+    // Ban / Mute
+    banUser, unbanUser, muteUser, unmuteUser, isUserMuted, isUserBanned,
+    promoteToAdmin, demoteFromAdmin,
+    // Admin & Moderator auth
+    getAdminPassword, setAdminPassword, adminLogin, adminLoginUser, adminLogout,
+    registerAdmin, moderatorLogin, registerModerator,
     // Comments
     getComments, addComment, deleteComment, avgRating,
+    // Likes
+    toggleLike, hasLiked, getLikeCount,
+    // Notifications
+    getNotifications, addNotification, markNotificationsRead, unreadNotificationCount,
     // Content
     getLiterature, getProjects, getRecommendations,
     getLitById, getProjById, getRecById,

@@ -4,13 +4,17 @@
       "id": "1",
       "title": "示例文章标题",
       "date": "2026-06-01",
+      "category": "随笔",
+      "tags": ["写作", "生活"],
       "excerpt": "在这里写下你的文字创作，替换为实际内容后即可发布。",
-      "content": "这是文章的正文内容。点击文章标题可以进入详情页查看完整内容和评论。\n\n## 支持 Markdown\n\n你可以使用 **粗体**、*斜体*、列表等格式。\n\n> 这是一段引用文字。\n\n编辑后点击「发布」即可更新到线上。"
+      "content": "这是文章的正文内容。点击文章标题可以进入详情页查看完整内容和评论。\n\n## 支持 Markdown\n\n你可以使用 **粗体**、*斜体*、列表等格式。\n\n> 这是一段引用文字。\n\n```python\nprint('Hello, World!')\n```\n\n编辑后点击「发布」即可更新到线上。"
     },
     {
       "id": "2",
       "title": "另一篇创作",
       "date": "2026-05-20",
+      "category": "技术",
+      "tags": ["代码", "教程"],
       "excerpt": "每一篇文章都是一个独立的世界，等待被书写。",
       "content": "用文字记录下每一个转瞬即逝的灵感。"
     }
@@ -124,7 +128,18 @@
     ]
   },
   "comments": {},
-  "users": [],
+  "users": [
+    {
+      "username": "2332685417",
+      "passwordHash": "xikb39",
+      "nickname": "版主",
+      "avatar": "",
+      "role": "moderator",
+      "bannedUntil": null,
+      "mutedUntil": null
+    }
+  ],
+  "notifications": {},
   "siteTitle": "MYGO-MUJICA-WEB",
   "siteSubtitle": "记录个人的文学创作、代码项目，以及那些值得被记住的作品。"
 }

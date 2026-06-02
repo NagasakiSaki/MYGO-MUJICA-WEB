@@ -7,186 +7,22 @@
 let editingLitId = null, editingProjId = null, editingRecId = null;
 
 // ── Admin entry ──────────────────────────────────────
-function initAdminEntry() {
-  document.querySelectorAll('.site-footer').forEach(footer => {
-    if (!footer.querySelector('.admin-entry')) {
-      const span = document.createElement('span');
-      span.className = 'admin-entry';
-      span.innerHTML = ' &middot; <a href="#" onclick="event.preventDefault();window.openAdminLogin()" style="color:var(--text-muted);font-size:0.78rem;">管理</a>';
-      footer.appendChild(span);
-    }
-  });
-}
+// (Footer link removed; all login through top-right button)
 
-// Expose to window
 window.openAdminLogin = function() {
   if (Store.isAdminLoggedIn()) {
     openAdminPanel();
     return;
   }
-  showSecretKeyGate();
+  if (typeof showAuthModal === 'function') {
+    showAuthModal('staff');
+  }
 };
-
-// ── Step 1: Secret Key Gate ───────────────────────────
-const SECRET_KEYS = ['togawa', 'sakiko', '200606'];
-
-function showSecretKeyGate() {
-  let overlay = document.getElementById('adminLoginModal');
-  if (overlay) overlay.remove();
-
-  overlay = document.createElement('div');
-  overlay.id = 'adminLoginModal';
-  overlay.className = 'modal-overlay';
-  overlay.innerHTML = `
-    <div class="modal-box" style="position:relative;">
-      <h2>管理员验证</h2>
-      <div class="msg" id="adminKeyMsg"></div>
-      <div class="form-group"><label>请输入管理员密钥</label><input type="password" id="adminKeyInput" placeholder="输入密钥"></div>
-      <button class="btn btn-primary" style="background:var(--accent);color:#fff;border:none;padding:0.55rem;border-radius:var(--radius-sm);cursor:pointer;width:100%;font-size:0.95rem;" id="adminKeyBtn">验证</button>
-    </div>`;
-  document.body.appendChild(overlay);
-
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.classList.remove('show');
-  });
-
-  document.getElementById('adminKeyBtn').addEventListener('click', verifySecretKey);
-  document.getElementById('adminKeyInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') verifySecretKey();
-  });
-
-  overlay.classList.add('show');
-  setTimeout(() => document.getElementById('adminKeyInput').focus(), 150);
-}
-
-function verifySecretKey() {
-  const input = document.getElementById('adminKeyInput').value.trim().toLowerCase();
-  const msg = document.getElementById('adminKeyMsg');
-  if (SECRET_KEYS.includes(input)) {
-    msg.textContent = '验证通过'; msg.className = 'msg success';
-    setTimeout(() => {
-      document.getElementById('adminLoginModal').remove();
-      showAdminLoginModal();
-    }, 500);
-  } else {
-    msg.textContent = '密钥错误'; msg.className = 'msg error';
-  }
-}
-
-// ── Step 2: Admin Password Login ──────────────────────
-function showAdminLoginModal() {
-  const hasPw = Store.getAdminPassword();
-
-  let overlay = document.getElementById('adminLoginModal');
-  if (overlay) overlay.remove();
-
-  overlay = document.createElement('div');
-  overlay.id = 'adminLoginModal';
-  overlay.className = 'modal-overlay';
-
-  if (!hasPw) {
-    // First time: setup password
-    overlay.innerHTML = `
-      <div class="modal-box" style="position:relative;">
-        <h2>设置管理密码</h2>
-        <div class="msg" id="adminSetupMsg"></div>
-        <div class="form-group"><label>密码（至少4位）</label><input type="password" id="adminSetupPw"></div>
-        <div class="form-group"><label>确认密码</label><input type="password" id="adminSetupPw2"></div>
-        <button class="btn btn-primary" style="background:var(--accent);color:#fff;border:none;padding:0.55rem;border-radius:var(--radius-sm);cursor:pointer;width:100%;font-size:0.95rem;" id="adminSetupBtn">设置并登录</button>
-        <p style="text-align:center;margin-top:0.6rem;font-size:0.8rem;"><a href="#" id="adminBackToKey" style="color:var(--accent);">返回上一步</a></p>
-      </div>`;
-  } else {
-    // Normal login
-    overlay.innerHTML = `
-      <div class="modal-box" style="position:relative;">
-        <h2>管理员登录</h2>
-        <div class="msg" id="adminLoginMsg"></div>
-        <div class="form-group"><label>管理密码</label><input type="password" id="adminLoginPw" placeholder="输入管理密码"></div>
-        <button class="btn btn-primary" style="background:var(--accent);color:#fff;border:none;padding:0.55rem;border-radius:var(--radius-sm);cursor:pointer;width:100%;font-size:0.95rem;" id="adminLoginBtn">进入管理</button>
-        <p style="text-align:center;margin-top:0.6rem;font-size:0.8rem;color:var(--text-muted);">
-          <a href="#" id="adminForgotPwLink" style="color:var(--danger);">忘记密码？</a>
-          &nbsp;&nbsp;
-          <a href="#" id="adminBackToKey2" style="color:var(--text-muted);">返回上一步</a>
-        </p>
-      </div>`;
-  }
-
-  document.body.appendChild(overlay);
-
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.classList.remove('show');
-  });
-
-  if (!hasPw) {
-    document.getElementById('adminSetupBtn').addEventListener('click', doAdminSetup);
-    document.getElementById('adminBackToKey').addEventListener('click', e => {
-      e.preventDefault();
-      document.getElementById('adminLoginModal').remove();
-      showSecretKeyGate();
-    });
-  } else {
-    document.getElementById('adminLoginBtn').addEventListener('click', doAdminLogin);
-    document.getElementById('adminLoginPw').addEventListener('keydown', e => { if (e.key==='Enter') doAdminLogin(); });
-    document.getElementById('adminForgotPwLink').addEventListener('click', e => {
-      e.preventDefault();
-      showAdminForgotPw();
-    });
-    document.getElementById('adminBackToKey2').addEventListener('click', e => {
-      e.preventDefault();
-      document.getElementById('adminLoginModal').remove();
-      showSecretKeyGate();
-    });
-  }
-
-  overlay.classList.add('show');
-  setTimeout(() => {
-    const inp = document.getElementById(!hasPw ? 'adminSetupPw' : 'adminLoginPw');
-    if (inp) inp.focus();
-  }, 150);
-}
-
-function showAdminForgotPw() {
-  if (!confirm('确认要重置管理密码吗？\n\n文章、项目、推荐等数据不会被删除。')) return;
-  Store.setAdminPassword('');
-  document.getElementById('adminLoginModal').remove();
-  showAdminLoginModal();
-}
-
-function doAdminSetup() {
-  const pw = document.getElementById('adminSetupPw').value;
-  const pw2 = document.getElementById('adminSetupPw2').value;
-  const msg = document.getElementById('adminSetupMsg');
-  if (!pw || pw.length < 4) { msg.textContent='密码至少需要4个字符'; msg.className='msg error'; return; }
-  if (pw !== pw2) { msg.textContent='两次输入的密码不一致'; msg.className='msg error'; return; }
-  Store.setAdminPassword(pw);
-  Store.adminLogin(pw);
-  msg.textContent = '设置成功'; msg.className = 'msg success';
-  setTimeout(() => {
-    document.getElementById('adminLoginModal').classList.remove('show');
-    openAdminPanel();
-    refreshEditorUI();
-  }, 400);
-}
-
-function doAdminLogin() {
-  const pw = document.getElementById('adminLoginPw').value;
-  const msg = document.getElementById('adminLoginMsg');
-  if (Store.adminLogin(pw)) {
-    msg.textContent = '登录成功'; msg.className = 'msg success';
-    setTimeout(() => {
-      document.getElementById('adminLoginModal').classList.remove('show');
-      openAdminPanel();
-      refreshEditorUI();
-    }, 400);
-  } else {
-    msg.textContent = '密码错误'; msg.className = 'msg error';
-  }
-}
 
 // ── Refresh header to show/hide editor button ─────────
 function refreshEditorUI() {
-  // Re-render the auth area in the header
   if (typeof renderAuthArea === 'function') renderAuthArea();
+  if (typeof hideAuthModal === 'function') hideAuthModal();
 }
 
 // ── Admin panel overlay ──────────────────────────────
@@ -223,6 +59,16 @@ window.closeAdminPanel = function() {
 function renderAdminPanel() {
   const body = document.getElementById('adminBody');
   if (!body) return;
+  const isMod = Store.isModerator();
+
+  if (isMod) {
+    renderModeratorPanel(body);
+  } else {
+    renderAdminOnlyPanel(body);
+  }
+}
+
+function renderModeratorPanel(body) {
   body.innerHTML = `
     <div class="admin-publish-bar" id="adminPublishBar"></div>
     <div class="admin-tabs">
@@ -230,19 +76,21 @@ function renderAdminPanel() {
       <button class="admin-tab-btn" data-atab="aproj">代码项目</button>
       <button class="admin-tab-btn" data-atab="arec">推荐帖</button>
       <button class="admin-tab-btn" data-atab="asite">网站设置</button>
+      <button class="admin-tab-btn" data-atab="acommunity">社区管理</button>
     </div>
     <div class="admin-tab-panel active" id="alit"></div>
     <div class="admin-tab-panel" id="aproj"></div>
     <div class="admin-tab-panel" id="arec"></div>
-    <div class="admin-tab-panel" id="asite"></div>`;
+    <div class="admin-tab-panel" id="asite"></div>
+    <div class="admin-tab-panel" id="acommunity"></div>`;
 
   renderPublishBar();
   renderLitTab();
   renderProjTab();
   renderRecTab();
   renderSiteTab();
+  renderCommunityTab();
 
-  // Tab switching
   body.querySelectorAll('.admin-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       body.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
@@ -251,6 +99,15 @@ function renderAdminPanel() {
       document.getElementById(btn.dataset.atab).classList.add('active');
     });
   });
+}
+
+function renderAdminOnlyPanel(body) {
+  body.innerHTML = `
+    <div style="text-align:center;color:var(--accent);padding:0.5rem;font-weight:600;font-family:var(--font-ui);">
+      🛡️ 管理员面板 — 社区管理
+    </div>
+    <div class="admin-tab-panel active" id="acommunity"></div>`;
+  renderCommunityTab();
 }
 
 // ── Publish bar ──────────────────────────────────────
@@ -349,6 +206,8 @@ function renderLitTab() {
       <input type="hidden" id="litId">
       <div class="form-row"><label>标题</label><input type="text" id="litTitle"></div>
       <div class="form-row"><label>日期</label><input type="date" id="litDate"></div>
+      <div class="form-row"><label>分类</label><input type="text" id="litCategory" placeholder="如：随笔、技术、诗歌..."></div>
+      <div class="form-row"><label>标签（逗号分隔）</label><input type="text" id="litTags" placeholder="标签1, 标签2"></div>
       <div class="form-row"><label>摘要</label><textarea id="litExcerpt"></textarea></div>
       <div class="form-row"><label>正文 (Markdown)</label><textarea id="litContent" class="tall"></textarea></div>
       <div class="btn-row">
@@ -362,10 +221,13 @@ function renderLitTab() {
 }
 
 window.saveLit = function() {
+  if (!requireModerator()) return;
   const id = editingLitId || Store.genId();
   const item = {
     id, title: document.getElementById('litTitle').value.trim(),
     date: document.getElementById('litDate').value,
+    category: document.getElementById('litCategory').value.trim(),
+    tags: document.getElementById('litTags').value.split(',').map(t=>t.trim()).filter(Boolean),
     excerpt: document.getElementById('litExcerpt').value.trim(),
     content: document.getElementById('litContent').value.trim()
   };
@@ -386,12 +248,15 @@ window.editLit = function(id) {
   document.getElementById('litId').value = id;
   document.getElementById('litTitle').value = item.title;
   document.getElementById('litDate').value = item.date;
+  document.getElementById('litCategory').value = item.category || '';
+  document.getElementById('litTags').value = (item.tags || []).join(', ');
   document.getElementById('litExcerpt').value = item.excerpt || '';
   document.getElementById('litContent').value = item.content || '';
   document.getElementById('alit').scrollIntoView({behavior:'smooth'});
 };
 
 window.deleteLit = function(id) {
+  if (!requireModerator()) return;
   if (!confirm('确认删除？')) return;
   Store.setLiterature(Store.getLiterature().filter(i => i.id !== id));
   if (editingLitId === id) window.cancelLit();
@@ -404,6 +269,8 @@ window.cancelLit = function() {
   document.getElementById('litId').value = '';
   document.getElementById('litTitle').value = '';
   document.getElementById('litDate').value = '';
+  document.getElementById('litCategory').value = '';
+  document.getElementById('litTags').value = '';
   document.getElementById('litExcerpt').value = '';
   document.getElementById('litContent').value = '';
   clearMsg('litFormMsg');
@@ -449,6 +316,7 @@ function renderProjTab() {
 }
 
 window.saveProj = function() {
+  if (!requireModerator()) return;
   const id = editingProjId || Store.genId();
   const item = {
     id, name: document.getElementById('projName').value.trim(),
@@ -481,6 +349,7 @@ window.editProj = function(id) {
 };
 
 window.deleteProj = function(id) {
+  if (!requireModerator()) return;
   if (!confirm('确认删除？')) return;
   Store.setProjects(Store.getProjects().filter(i => i.id !== id));
   if (editingProjId === id) window.cancelProj();
@@ -555,6 +424,7 @@ function renderRecTab() {
 }
 
 window.saveRec = function() {
+  if (!requireModerator()) return;
   const id = editingRecId || Store.genId();
   const cat = document.getElementById('recCat').value;
   const item = {
@@ -603,6 +473,7 @@ window.editRec = function(id) {
 };
 
 window.deleteRec = function(id) {
+  if (!requireModerator()) return;
   if (!confirm('确认删除？')) return;
   const ALL_CATS = ['literary','popular','lightnovel','manga','movie','drama','anime','music'];
   let all = Store.getRecommendations();
@@ -658,14 +529,76 @@ function renderSiteTab() {
       <div class="msg" id="siteFormMsg"></div>
     </div>
     <div class="admin-form">
-      <h3>修改管理密码</h3>
+      <h3>修改密码</h3>
       <div class="form-row"><label>当前密码</label><input type="password" id="oldPassword"></div>
-      <div class="form-row"><label>新密码（至少4位）</label><input type="password" id="newPassword"></div>
+      <div class="form-row"><label>新密码（至少3位）</label><input type="password" id="newPassword"></div>
       <div class="form-row"><label>确认新密码</label><input type="password" id="newPassword2"></div>
       <div class="btn-row"><button class="admin-btn primary" onclick="window.changeAdminPw()">修改密码</button></div>
       <div class="msg" id="pwFormMsg"></div>
-    </div>`;
+    </div>
+    <div class="admin-form" id="adminMgmtSection"></div>`;
+  renderAdminMgmt();
 }
+
+function renderAdminMgmt() {
+  const section = document.getElementById('adminMgmtSection');
+  if (!section) return;
+  const admins = Store.getAdmins();
+  section.innerHTML = `
+    <h3>管理员列表 (${admins.length}人)</h3>
+    <div class="admin-item-list" style="margin-bottom:0.8rem;">
+      ${admins.map(a => `
+        <div class="admin-item-row">
+          <div class="info">
+            <div class="name">${escHtml(a.nickname || a.username)} <span style="color:var(--text-muted);font-weight:400;">@${escHtml(a.username)}</span></div>
+          </div>
+          <div class="actions">
+            <button class="admin-btn danger sm" onclick="window.removeAdmin('${escHtml(a.username)}')">移除</button>
+          </div>
+        </div>
+      `).join('')}
+      ${admins.length === 0 ? '<p style="color:var(--text-muted);font-size:0.85rem;">暂无管理员（异常状态）</p>' : ''}
+    </div>
+    <h4 style="font-size:0.9rem;margin-bottom:0.5rem;">添加管理员</h4>
+    <div class="form-row"><label>用户名</label><input type="text" id="newAdminUsername"></div>
+    <div class="form-row"><label>密码</label><input type="password" id="newAdminPassword"></div>
+    <div class="form-row"><label>昵称</label><input type="text" id="newAdminNickname"></div>
+    <div class="btn-row"><button class="admin-btn primary" onclick="window.addNewAdmin()">添加</button></div>
+    <div class="msg" id="adminMgmtMsg"></div>`;
+}
+
+window.addNewAdmin = function() {
+  const result = Store.registerAdmin(
+    document.getElementById('newAdminUsername').value.trim(),
+    document.getElementById('newAdminPassword').value,
+    { nickname: document.getElementById('newAdminNickname').value.trim() }
+  );
+  if (result.ok) {
+    showFormMsg('adminMgmtMsg', '管理员已添加 · 发布后生效', 'success');
+    document.getElementById('newAdminUsername').value = '';
+    document.getElementById('newAdminPassword').value = '';
+    document.getElementById('newAdminNickname').value = '';
+    renderAdminMgmt();
+  } else {
+    showFormMsg('adminMgmtMsg', result.msg, 'error');
+  }
+};
+
+window.removeAdmin = function(username) {
+  const currentAdmin = Store.getCurrentUserInfo();
+  if (currentAdmin && currentAdmin.username === username) {
+    alert('不能移除自己');
+    return;
+  }
+  if (!confirm('确认移除管理员 ' + username + '？')) return;
+  const users = Store.getUsers();
+  const idx = users.findIndex(u => u.username === username && u.isAdmin);
+  if (idx !== -1) {
+    users[idx].isAdmin = false;
+    Store.setUsers(users);
+    renderAdminMgmt();
+  }
+};
 
 window.saveSite = function() {
   Store.setSiteInfo({
@@ -679,17 +612,187 @@ window.changeAdminPw = function() {
   const oldPw = document.getElementById('oldPassword').value;
   const newPw = document.getElementById('newPassword').value;
   const newPw2 = document.getElementById('newPassword2').value;
-  if (oldPw !== Store.getAdminPassword()) { showFormMsg('pwFormMsg','当前密码错误','error'); return; }
-  if (!newPw || newPw.length < 4) { showFormMsg('pwFormMsg','新密码至少4个字符','error'); return; }
+  if (!newPw || newPw.length < 3) { showFormMsg('pwFormMsg','新密码至少3个字符','error'); return; }
   if (newPw !== newPw2) { showFormMsg('pwFormMsg','两次密码不一致','error'); return; }
-  Store.setAdminPassword(newPw);
-  document.getElementById('oldPassword').value = '';
-  document.getElementById('newPassword').value = '';
-  document.getElementById('newPassword2').value = '';
-  showFormMsg('pwFormMsg', '密码已修改', 'success');
+
+  const info = Store.getCurrentUserInfo();
+  if (!info) { showFormMsg('pwFormMsg','未登录','error'); return; }
+
+  // Verify old password by attempting login
+  const check = Store.adminLoginUser(info.username, oldPw);
+  if (!check.ok) { showFormMsg('pwFormMsg','当前密码错误','error'); return; }
+
+  // Update password
+  const users = Store.getUsers();
+  const user = users.find(u => u.username === info.username);
+  if (user) {
+    user.passwordHash = (() => {
+      let hash = 0; const salt = 'mygo_salt_2026'; const str = newPw + salt;
+      for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; }
+      return hash.toString(36);
+    })();
+    Store.setUsers(users);
+    document.getElementById('oldPassword').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('newPassword2').value = '';
+    showFormMsg('pwFormMsg', '密码已修改 · 发布后生效', 'success');
+  } else {
+    showFormMsg('pwFormMsg','用户不存在','error');
+  }
 };
 
 // ── Helpers ──────────────────────────────────────────
+// ── Community Management (Admin & Moderator) ──────────
+function renderCommunityTab() {
+  const panel = document.getElementById('acommunity');
+  if (!panel) return;
+
+  const allUsers = Store.getUsers();
+  const allComments = collectAllComments();
+
+  panel.innerHTML = `
+    <div class="admin-form">
+      <h3>用户管理 (${allUsers.length}人)</h3>
+      <div class="admin-item-list" style="max-height:400px;overflow-y:auto;">
+        ${allUsers.map(u => {
+          const isBanned = u.bannedUntil && new Date(u.bannedUntil) > new Date();
+          const isMuted = u.mutedUntil && new Date(u.mutedUntil) > new Date();
+          return `
+          <div class="admin-item-row" style="${isBanned ? 'opacity:0.5;' : ''}">
+            <div class="info">
+              <div class="name">
+                ${escHtml(u.nickname || u.username)}
+                <span style="font-size:0.72rem;color:var(--text-muted);">@${escHtml(u.username)}</span>
+                ${u.role === 'moderator' ? '<span style="font-size:0.72rem;color:#e6a817;">[版主]</span>' : ''}
+                ${u.role === 'admin' ? '<span style="font-size:0.72rem;color:var(--accent);">[管理员]</span>' : ''}
+                ${isBanned ? '<span style="font-size:0.72rem;color:var(--danger);">[已封禁]</span>' : ''}
+                ${isMuted ? '<span style="font-size:0.72rem;color:#e6a817;">[已禁言]</span>' : ''}
+              </div>
+            </div>
+            <div class="actions">
+              ${u.role === 'moderator' ? '<span style="font-size:0.75rem;color:var(--text-muted);">受保护</span>' : ''}
+              ${u.role === 'admin' ? `
+                ${Store.isModerator() ? `<button class="admin-btn danger sm" onclick="window.demoteAdminDialog('${escHtml(u.username)}')">贬黜</button>` : ''}
+                <button class="admin-btn outline sm" onclick="window.muteUserDialog('${escHtml(u.username)}')">${isMuted ? '解除禁言' : '禁言'}</button>
+                <button class="admin-btn danger sm" onclick="window.banUserDialog('${escHtml(u.username)}')">${isBanned ? '解封' : '封禁'}</button>
+              ` : ''}
+              ${u.role === 'user' ? `
+                ${Store.isModerator() ? `<button class="admin-btn primary sm" onclick="window.promoteAdminDialog('${escHtml(u.username)}')">提拔</button>` : ''}
+                <button class="admin-btn outline sm" onclick="window.muteUserDialog('${escHtml(u.username)}')">${isMuted ? '解除禁言' : '禁言'}</button>
+                <button class="admin-btn danger sm" onclick="window.banUserDialog('${escHtml(u.username)}')">${isBanned ? '解封' : '封禁'}</button>
+              ` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+        ${allUsers.length === 0 ? '<p style="color:var(--text-muted);font-size:0.85rem;">暂无用户</p>' : ''}
+      </div>
+    </div>
+    <div class="admin-form">
+      <h3>评论管理 (${allComments.length}条)</h3>
+      <div class="admin-item-list" style="max-height:400px;overflow-y:auto;">
+        ${allComments.map(c => `
+          <div class="admin-item-row">
+            <div class="info">
+              <div class="name">${escHtml(c.authorNickname || c.author)} ★${c.rating}</div>
+              <div class="meta">${escHtml(c.content).slice(0,60)}... · ${c.date} · ${c.type}</div>
+            </div>
+            <div class="actions">
+              <button class="admin-btn danger sm" onclick="window.adminDeleteComment('${c.type}','${c.itemId}','${c.id}')">删除</button>
+            </div>
+          </div>
+        `).join('')}
+        ${allComments.length === 0 ? '<p style="color:var(--text-muted);font-size:0.85rem;">暂无评论</p>' : ''}
+      </div>
+    </div>`;
+}
+
+function collectAllComments() {
+  const all = [];
+  const comments = Store.getPublishData().comments || {};
+  // Also check localStorage overrides
+  const over = (() => { try { return JSON.parse(localStorage.getItem('mygo_admin_data')||'{}'); } catch(e) { return {}; } })();
+  const merged = { ...comments, ...(over.comments||{}) };
+  Object.keys(merged).forEach(key => {
+    const [type, ...idParts] = key.split('-');
+    const itemId = idParts.join('-');
+    (merged[key] || []).forEach(c => {
+      all.push({ ...c, type, itemId });
+    });
+  });
+  all.sort((a, b) => b.date.localeCompare(a.date));
+  return all;
+}
+
+window.adminDeleteComment = function(type, itemId, commentId) {
+  if (!confirm('确认删除这条评论？')) return;
+  Store.deleteComment(type, itemId, commentId);
+  renderCommunityTab();
+};
+
+window.muteUserDialog = function(username) {
+  const users = Store.getUsers();
+  const u = users.find(u => u.username === username);
+  if (!u) return;
+  const isMuted = u.mutedUntil && new Date(u.mutedUntil) > new Date();
+  if (isMuted) {
+    if (!confirm('解除对 ' + username + ' 的禁言？')) return;
+    Store.unmuteUser(username);
+    renderCommunityTab();
+    return;
+  }
+  const duration = prompt('禁言时长（分钟），留空为永久禁言，输入数字如 60 表示60分钟：', '');
+  if (duration === null) return; // cancelled
+  const until = duration === '' ? '2999-12-31T23:59:59.999Z' : new Date(Date.now() + parseInt(duration) * 60000).toISOString();
+  Store.muteUser(username, until);
+  renderCommunityTab();
+};
+
+window.promoteAdminDialog = function(username) {
+  if (!confirm('确认将 @' + username + ' 提拔为管理员？\n\n提拔后该用户将拥有禁言、封禁、删评等社区管理权限。')) return;
+  const result = Store.promoteToAdmin(username);
+  if (result.ok) {
+    renderCommunityTab();
+  } else {
+    alert(result.msg);
+  }
+};
+
+window.demoteAdminDialog = function(username) {
+  if (!confirm('确认贬黜管理员 @' + username + '？\n\n该用户将失去所有管理权限，变回普通用户。')) return;
+  const result = Store.demoteFromAdmin(username);
+  if (result.ok) {
+    renderCommunityTab();
+  } else {
+    alert(result.msg);
+  }
+};
+
+window.banUserDialog = function(username) {
+  const users = Store.getUsers();
+  const u = users.find(u => u.username === username);
+  if (!u) return;
+  const isBanned = u.bannedUntil && new Date(u.bannedUntil) > new Date();
+  if (isBanned) {
+    if (!confirm('解封 ' + username + '？')) return;
+    Store.unbanUser(username);
+    renderCommunityTab();
+    return;
+  }
+  const duration = prompt('封禁时长（分钟），留空为永久封禁，输入数字如 1440 表示一天：', '');
+  if (duration === null) return;
+  const until = duration === '' ? '2999-12-31T23:59:59.999Z' : new Date(Date.now() + parseInt(duration) * 60000).toISOString();
+  Store.banUser(username, until);
+  renderCommunityTab();
+};
+
+// ── Helpers ──────────────────────────────────────────
+function requireModerator() {
+  if (!Store.isModerator()) {
+    alert('只有版主可以修改作品内容；管理员只能管理用户和评论');
+    return false;
+  }
+  return true;
+}
 function escHtml(s) {
   const d = document.createElement('div');
   d.textContent = s || '';
@@ -706,11 +809,10 @@ function clearMsg(id) {
   if (el) { el.textContent = ''; el.className = 'msg'; }
 }
 
-// ── Init: inject admin entry when DOM ready ──────────
+// ── Init ─────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Wait for store to be ready
   Store.onReady(() => {
-    initAdminEntry();
+    // No footer link; all login through top-right auth button
   });
 });
 
