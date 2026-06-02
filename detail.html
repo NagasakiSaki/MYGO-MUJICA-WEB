@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>详情 — MYGO-MUJICA-WEB</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="site-title">MYGO-MUJICA-WEB</a>
+    <nav>
+      <ul class="site-nav">
+        <li><a href="literature.html">文学创作</a></li>
+        <li><a href="projects.html">代码项目</a></li>
+        <li><a href="recommendations.html">推荐作品</a></li>
+      </ul>
+    </nav>
+    <div class="header-right" id="authArea"></div>
+  </div>
+</header>
+
+<main>
+  <div id="detailContent"></div>
+
+  <!-- Comment section -->
+  <section class="comment-section" id="commentSection">
+    <h2>评论 & 评分</h2>
+
+    <div id="commentFormArea"></div>
+
+    <div class="comment-list" id="commentList"></div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  &copy; 2026 MYGO-MUJICA-WEB
+</footer>
+
+<!-- Auth Modal -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal-box" id="authModalBox"></div>
+</div>
+
+<script src="js/store.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

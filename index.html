@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MYGO-MUJICA-WEB</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="index.html" class="site-title">MYGO-MUJICA-WEB</a>
+    <nav>
+      <ul class="site-nav">
+        <li><a href="literature.html">文学创作</a></li>
+        <li><a href="projects.html">代码项目</a></li>
+        <li><a href="recommendations.html">推荐作品</a></li>
+      </ul>
+    </nav>
+    <div class="header-right" id="authArea"></div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <h1>欢迎来访</h1>
+    <p>记录个人的文学创作、代码项目，以及那些值得被记住的作品。</p>
+  </section>
+
+  <section class="branches">
+    <a href="literature.html" class="branch-card">
+      <div class="icon">✍️</div>
+      <h2>个人文学创作集</h2>
+      <p>随笔、短篇、诗歌，用文字记录思考与感受。</p>
+    </a>
+    <a href="projects.html" class="branch-card">
+      <div class="icon">💻</div>
+      <h2>个人代码项目</h2>
+      <p>开源项目、工具、实验性代码，把想法变成现实。</p>
+    </a>
+    <a href="recommendations.html" class="branch-card">
+      <div class="icon">📌</div>
+      <h2>个人推荐作品</h2>
+      <p>书籍、音乐、影视，分享那些打动我的创作。</p>
+    </a>
+  </section>
+</main>
+
+<footer class="site-footer">
+  &copy; 2026 MYGO-MUJICA-WEB
+</footer>
+
+<div class="modal-overlay" id="authModal">
+  <div class="modal-box" id="authModalBox"></div>
+</div>
+
+<script src="js/store.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
