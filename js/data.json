@@ -21,7 +21,11 @@
       "name": "项目名称",
       "desc": "这是一个示例项目的简短描述。",
       "detail": "项目的详细介绍，说明技术选型、架构设计等。",
-      "tags": ["HTML", "CSS", "JavaScript"],
+      "tags": [
+        "HTML",
+        "CSS",
+        "JavaScript"
+      ],
       "link": ""
     },
     {
@@ -29,7 +33,10 @@
       "name": "另一个项目",
       "desc": "用代码构建有趣的东西。",
       "detail": "更详细的项目说明。",
-      "tags": ["Python", "Flask"],
+      "tags": [
+        "Python",
+        "Flask"
+      ],
       "link": ""
     }
   ],
