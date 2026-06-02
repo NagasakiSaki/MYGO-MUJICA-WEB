@@ -196,21 +196,27 @@ function renderAuthArea() {
   const area = document.getElementById('authArea');
   if (!area) return;
   const user = Store.getCurrentUser();
+  const isAdmin = Store.isAdminLoggedIn();
 
-  // Theme toggle
   const themeIcon = (document.documentElement.getAttribute('data-theme')==='dark') ? '☀️' : '🌙';
 
   const extras = `
     <button class="search-toggle" onclick="openSearch()" title="搜索">🔍</button>
     <button class="theme-toggle" onclick="toggleTheme();renderAuthArea();" title="切换主题">${themeIcon}</button>`;
 
+  let adminBtn = '';
+  if (isAdmin) {
+    adminBtn = `<button class="auth-btn" onclick="window.openAdminPanel()" style="border-color:#e6a817;color:#e6a817;" title="编辑器">✎ 编辑器</button>`;
+  }
+
   if (user) {
-    area.innerHTML = extras + `
+    area.innerHTML = extras + adminBtn + `
       <div class="user-menu" id="userMenu">
         <div class="avatar">${esc(user[0].toUpperCase())}</div>
         <span>${esc(user)}</span>
         <div class="user-dropdown" id="userDropdown">
-          <button onclick="Store.logout();location.reload();">退出登录</button>
+          <button onclick="Store.adminLogout();Store.logout();location.reload();">退出所有登录</button>
+          <button onclick="Store.logout();location.reload();">退出用户</button>
         </div>
       </div>`;
     document.getElementById('userMenu').addEventListener('click', e => {
@@ -222,7 +228,7 @@ function renderAuthArea() {
       if (dd) dd.classList.remove('show');
     });
   } else {
-    area.innerHTML = extras + `<button class="auth-btn" onclick="showAuthModal('login')">登录</button>`;
+    area.innerHTML = extras + adminBtn + `<button class="auth-btn" onclick="showAuthModal('login')">登录</button>`;
   }
 }
 

@@ -8,7 +8,6 @@ let editingLitId = null, editingProjId = null, editingRecId = null;
 
 // ── Admin entry ──────────────────────────────────────
 function initAdminEntry() {
-  // Add admin link to footer
   document.querySelectorAll('.site-footer').forEach(footer => {
     if (!footer.querySelector('.admin-entry')) {
       const span = document.createElement('span');
@@ -19,22 +18,85 @@ function initAdminEntry() {
   });
 }
 
-// Expose to window for onclick
+// Expose to window
 window.openAdminLogin = function() {
   if (Store.isAdminLoggedIn()) {
     openAdminPanel();
     return;
   }
-  showAdminLoginModal();
+  showSecretKeyGate();
 };
 
-// ── Admin login modal ────────────────────────────────
-function showAdminLoginModal() {
+// ── Step 1: Secret Key Gate ───────────────────────────
+const SECRET_KEYS = ['togawa', 'sakiko', '200606'];
+
+function showSecretKeyGate() {
   let overlay = document.getElementById('adminLoginModal');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'adminLoginModal';
-    overlay.className = 'modal-overlay';
+  if (overlay) overlay.remove();
+
+  overlay = document.createElement('div');
+  overlay.id = 'adminLoginModal';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="position:relative;">
+      <h2>管理员验证</h2>
+      <div class="msg" id="adminKeyMsg"></div>
+      <div class="form-group"><label>请输入管理员密钥</label><input type="password" id="adminKeyInput" placeholder="输入密钥"></div>
+      <button class="btn btn-primary" style="background:var(--accent);color:#fff;border:none;padding:0.55rem;border-radius:var(--radius-sm);cursor:pointer;width:100%;font-size:0.95rem;" id="adminKeyBtn">验证</button>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('show');
+  });
+
+  document.getElementById('adminKeyBtn').addEventListener('click', verifySecretKey);
+  document.getElementById('adminKeyInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') verifySecretKey();
+  });
+
+  overlay.classList.add('show');
+  setTimeout(() => document.getElementById('adminKeyInput').focus(), 150);
+}
+
+function verifySecretKey() {
+  const input = document.getElementById('adminKeyInput').value.trim().toLowerCase();
+  const msg = document.getElementById('adminKeyMsg');
+  if (SECRET_KEYS.includes(input)) {
+    msg.textContent = '验证通过'; msg.className = 'msg success';
+    setTimeout(() => {
+      document.getElementById('adminLoginModal').remove();
+      showAdminLoginModal();
+    }, 500);
+  } else {
+    msg.textContent = '密钥错误'; msg.className = 'msg error';
+  }
+}
+
+// ── Step 2: Admin Password Login ──────────────────────
+function showAdminLoginModal() {
+  const hasPw = Store.getAdminPassword();
+
+  let overlay = document.getElementById('adminLoginModal');
+  if (overlay) overlay.remove();
+
+  overlay = document.createElement('div');
+  overlay.id = 'adminLoginModal';
+  overlay.className = 'modal-overlay';
+
+  if (!hasPw) {
+    // First time: setup password
+    overlay.innerHTML = `
+      <div class="modal-box" style="position:relative;">
+        <h2>设置管理密码</h2>
+        <div class="msg" id="adminSetupMsg"></div>
+        <div class="form-group"><label>密码（至少4位）</label><input type="password" id="adminSetupPw"></div>
+        <div class="form-group"><label>确认密码</label><input type="password" id="adminSetupPw2"></div>
+        <button class="btn btn-primary" style="background:var(--accent);color:#fff;border:none;padding:0.55rem;border-radius:var(--radius-sm);cursor:pointer;width:100%;font-size:0.95rem;" id="adminSetupBtn">设置并登录</button>
+        <p style="text-align:center;margin-top:0.6rem;font-size:0.8rem;"><a href="#" id="adminBackToKey" style="color:var(--accent);">返回上一步</a></p>
+      </div>`;
+  } else {
+    // Normal login
     overlay.innerHTML = `
       <div class="modal-box" style="position:relative;">
         <h2>管理员登录</h2>
@@ -42,44 +104,52 @@ function showAdminLoginModal() {
         <div class="form-group"><label>管理密码</label><input type="password" id="adminLoginPw" placeholder="输入管理密码"></div>
         <button class="btn btn-primary" style="background:var(--accent);color:#fff;border:none;padding:0.55rem;border-radius:var(--radius-sm);cursor:pointer;width:100%;font-size:0.95rem;" id="adminLoginBtn">进入管理</button>
         <p style="text-align:center;margin-top:0.6rem;font-size:0.8rem;color:var(--text-muted);">
-          首次使用？在本地打开 admin.html 设置密码，或<a href="#" id="adminSetupLink" style="color:var(--accent);">点此设置初始密码</a>
+          <a href="#" id="adminForgotPwLink" style="color:var(--danger);">忘记密码？</a>
+          &nbsp;&nbsp;
+          <a href="#" id="adminBackToKey2" style="color:var(--text-muted);">返回上一步</a>
         </p>
       </div>`;
-    document.body.appendChild(overlay);
+  }
 
-    overlay.addEventListener('click', e => {
-      if (e.target === overlay) overlay.classList.remove('show');
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('show');
+  });
+
+  if (!hasPw) {
+    document.getElementById('adminSetupBtn').addEventListener('click', doAdminSetup);
+    document.getElementById('adminBackToKey').addEventListener('click', e => {
+      e.preventDefault();
+      document.getElementById('adminLoginModal').remove();
+      showSecretKeyGate();
     });
-
+  } else {
     document.getElementById('adminLoginBtn').addEventListener('click', doAdminLogin);
     document.getElementById('adminLoginPw').addEventListener('keydown', e => { if (e.key==='Enter') doAdminLogin(); });
-    document.getElementById('adminSetupLink').addEventListener('click', e => {
+    document.getElementById('adminForgotPwLink').addEventListener('click', e => {
       e.preventDefault();
-      showAdminSetupForm();
+      showAdminForgotPw();
+    });
+    document.getElementById('adminBackToKey2').addEventListener('click', e => {
+      e.preventDefault();
+      document.getElementById('adminLoginModal').remove();
+      showSecretKeyGate();
     });
   }
+
   overlay.classList.add('show');
-  document.getElementById('adminLoginMsg').textContent = '';
-  document.getElementById('adminLoginMsg').className = 'msg';
-  setTimeout(() => document.getElementById('adminLoginPw').focus(), 150);
+  setTimeout(() => {
+    const inp = document.getElementById(!hasPw ? 'adminSetupPw' : 'adminLoginPw');
+    if (inp) inp.focus();
+  }, 150);
 }
 
-function showAdminSetupForm() {
-  document.getElementById('adminLoginModal').querySelector('.modal-box').innerHTML = `
-    <h2>设置管理密码</h2>
-    <div class="msg" id="adminSetupMsg"></div>
-    <div class="form-group"><label>密码（至少4位）</label><input type="password" id="adminSetupPw"></div>
-    <div class="form-group"><label>确认密码</label><input type="password" id="adminSetupPw2"></div>
-    <button class="btn btn-primary" style="background:var(--accent);color:#fff;border:none;padding:0.55rem;border-radius:var(--radius-sm);cursor:pointer;width:100%;font-size:0.95rem;" id="adminSetupBtn">设置并登录</button>
-    <p style="text-align:center;margin-top:0.6rem;font-size:0.8rem;"><a href="#" id="adminBackToLogin" style="color:var(--accent);">返回登录</a></p>
-  `;
-  document.getElementById('adminSetupBtn').addEventListener('click', doAdminSetup);
-  document.getElementById('adminBackToLogin').addEventListener('click', e => {
-    e.preventDefault();
-    document.getElementById('adminLoginModal').remove();
-    showAdminLoginModal();
-  });
-  const msgEl = document.getElementById('adminSetupMsg');
+function showAdminForgotPw() {
+  if (!confirm('确认要重置管理密码吗？\n\n文章、项目、推荐等数据不会被删除。')) return;
+  Store.setAdminPassword('');
+  document.getElementById('adminLoginModal').remove();
+  showAdminLoginModal();
 }
 
 function doAdminSetup() {
@@ -89,11 +159,13 @@ function doAdminSetup() {
   if (!pw || pw.length < 4) { msg.textContent='密码至少需要4个字符'; msg.className='msg error'; return; }
   if (pw !== pw2) { msg.textContent='两次输入的密码不一致'; msg.className='msg error'; return; }
   Store.setAdminPassword(pw);
-  msg.textContent='密码已设置，请登录'; msg.className='msg success';
+  Store.adminLogin(pw);
+  msg.textContent = '设置成功'; msg.className = 'msg success';
   setTimeout(() => {
-    document.getElementById('adminLoginModal').remove();
-    showAdminLoginModal();
-  }, 800);
+    document.getElementById('adminLoginModal').classList.remove('show');
+    openAdminPanel();
+    refreshEditorUI();
+  }, 400);
 }
 
 function doAdminLogin() {
@@ -104,10 +176,17 @@ function doAdminLogin() {
     setTimeout(() => {
       document.getElementById('adminLoginModal').classList.remove('show');
       openAdminPanel();
+      refreshEditorUI();
     }, 400);
   } else {
     msg.textContent = '密码错误'; msg.className = 'msg error';
   }
+}
+
+// ── Refresh header to show/hide editor button ─────────
+function refreshEditorUI() {
+  // Re-render the auth area in the header
+  if (typeof renderAuthArea === 'function') renderAuthArea();
 }
 
 // ── Admin panel overlay ──────────────────────────────
@@ -133,6 +212,7 @@ function openAdminPanel() {
   renderAdminPanel();
 }
 
+window.openAdminPanel = openAdminPanel;
 window.closeAdminPanel = function() {
   const panel = document.getElementById('adminOverlay');
   if (panel) panel.classList.remove('show');
