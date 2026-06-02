@@ -318,7 +318,9 @@ function renderLiterature() {
       <p class="excerpt">${esc(i.excerpt)}</p>
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
         <span class="reading-time">阅读约 ${rt} 分钟</span>
-        ${avg > 0 ? `<span class="rating-badge"><span class="star-icon">★</span> ${avg}</span>` : ''}
+        <a href="detail.html?type=lit&id=${i.id}#comments" style="font-size:0.82rem;color:var(--accent);text-decoration:none;font-family:var(--font-ui);">
+          ${avg > 0 ? `<span class="rating-badge" style="margin-right:0.2rem;"><span class="star-icon">★</span> ${avg}</span>` : ''}评价 →
+        </a>
       </div>
     </li>`;
   }).join('') : '<p style="color:var(--text-muted);">暂无文章，去 <a href="admin.html">管理后台</a> 添加吧。</p>';
@@ -338,7 +340,11 @@ function renderProjects() {
       <h3><a href="detail.html?type=proj&id=${i.id}">${esc(i.name)}</a>${i.link ? ` <a href="${esc(i.link)}" target="_blank" style="font-size:0.75rem;color:var(--accent);">↗</a>` : ''}</h3>
       <p>${esc(i.desc)}</p>
       <div class="tech-tags">${(i.tags || []).map(t => `<span class="tech-tag">${esc(t)}</span>`).join('')}</div>
-      ${avg > 0 ? `<div class="rating-badge" style="margin-top:0.5rem;font-size:0.82rem;"><span class="star-icon">★</span> ${avg}</div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.65rem;">
+        <a href="detail.html?type=proj&id=${i.id}#comments" style="font-size:0.82rem;color:var(--accent);text-decoration:none;font-family:var(--font-ui);">
+          ${avg > 0 ? `<span class="rating-badge" style="margin-right:0.2rem;"><span class="star-icon">★</span> ${avg}</span>` : ''}评价 →
+        </a>
+      </div>
     </div>`;
   }).join('') : '<p style="color:var(--text-muted);">暂无项目，去 <a href="admin.html">管理后台</a> 添加吧。</p>';
 }
@@ -360,7 +366,11 @@ function renderRecommendations() {
           <h4>${esc(i.title)}</h4>
           <p class="meta">${esc(i[authorKey] || '')}${i.year ? ' · ' + esc(i.year) : ''}</p>
           <p>${esc(i.excerpt || i.review || '').slice(0, 80)}${(i.excerpt || i.review || '').length > 80 ? '…' : ''}</p>
-          ${avg > 0 ? `<div class="rating-badge" style="margin-top:0.3rem;"><span class="star-icon">★</span> ${avg}</div>` : ''}
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.4rem;">
+            <span style="font-size:0.8rem;color:var(--accent);font-family:var(--font-ui);">
+              ${avg > 0 ? `<span class="rating-badge" style="margin-right:0.2rem;"><span class="star-icon">★</span> ${avg}</span>` : ''}评价 →
+            </span>
+          </div>
         </a>
       </div>`;
     }).join('') + '</div>';
