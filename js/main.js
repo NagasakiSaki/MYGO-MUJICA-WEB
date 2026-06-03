@@ -151,18 +151,44 @@ document.addEventListener('click', e => { if (e.target.id === 'authModal') hideA
 // ── Auth actions ──────────────────────────────────────
 async function doLogin() {
   const msg = document.getElementById('loginMsg');
-  const result = await Store.login(document.getElementById('loginEmail').value.trim(), document.getElementById('loginPassword').value);
+  const email = document.getElementById('loginEmail').value.trim();
+  const result = await Store.login(email, document.getElementById('loginPassword').value);
   if (result.ok) { msg.textContent = '登录成功'; msg.className = 'msg success'; setTimeout(() => location.reload(), 500); }
-  else { msg.textContent = result.msg; msg.className = 'msg error'; }
+  else {
+    const errMsg = result.msg || '';
+    if (errMsg.includes('Email not confirmed') || errMsg.includes('not confirmed')) {
+      msg.innerHTML = '邮箱未验证。请检查收件箱（含垃圾邮件），点击验证链接后再登录。<br><br><a onclick="resendVerifyEmail(\''+esc(email)+'\')" style="color:var(--accent);cursor:pointer;">重新发送验证邮件</a>';
+    } else {
+      msg.textContent = result.msg;
+    }
+    msg.className = 'msg error';
+  }
 }
 async function doRegister() {
   const msg = document.getElementById('registerMsg');
-  const result = await Store.register(document.getElementById('regEmail').value.trim(), document.getElementById('regPassword').value, {
+  const email = document.getElementById('regEmail').value.trim();
+  const result = await Store.register(email, document.getElementById('regPassword').value, {
     username: document.getElementById('regUsername').value.trim(), nickname: document.getElementById('regNickname').value.trim()
   });
-  if (result.ok) { msg.textContent = '注册成功！请登录。'; msg.className = 'msg success'; setTimeout(() => showAuthSubForm('userLogin'), 1000); }
-  else { msg.textContent = result.msg; msg.className = 'msg error'; }
+  if (result.ok) {
+    if (result.needsConfirmation) {
+      msg.innerHTML = '注册成功！已发送验证邮件到 <strong>'+esc(email)+'</strong>，请点击邮件中的链接完成验证后再登录。<br><br><a onclick="resendVerifyEmail(\''+esc(email)+'\')" style="color:var(--accent);cursor:pointer;">未收到邮件？重新发送</a>';
+      msg.className = 'msg success';
+    } else {
+      msg.textContent = '注册成功！请登录。'; msg.className = 'msg success';
+      setTimeout(() => showAuthSubForm('userLogin'), 1000);
+    }
+  } else { msg.textContent = result.msg; msg.className = 'msg error'; }
 }
+
+window.resendVerifyEmail = async function(email) {
+  const result = await Store.resendVerification(email);
+  if (result.ok) {
+    const msg = document.getElementById('registerMsg');
+    msg.innerHTML = '验证邮件已重新发送到 <strong>'+esc(email)+'</strong>，请查收。';
+    msg.className = 'msg success';
+  }
+};
 function verifyStaffKey() {
   const input = document.getElementById('staffKeyInput').value.trim().toLowerCase();
   const msg = document.getElementById('staffKeyMsg');

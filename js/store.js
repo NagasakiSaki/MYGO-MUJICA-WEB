@@ -31,20 +31,19 @@ const Store = (() => {
   }
 
   async function register(email, password, opts = {}) {
-    // Supabase uses email-based auth. We store the email as both email and username
+    // Supabase email-based auth
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          username: opts.username || email,
-          nickname: opts.nickname || ''
-        }
+        data: { username: opts.username || email, nickname: opts.nickname || '' },
+        emailRedirectTo: window.location.origin
       }
     });
     if (error) return { ok: false, msg: error.message };
 
-    // Update profile with additional info
+    const needsConfirmation = data.user && !data.user.email_confirmed_at;
+
     if (data.user) {
       const { error: profileErr } = await supabase.from('profiles').upsert({
         id: data.user.id,
@@ -52,10 +51,15 @@ const Store = (() => {
         nickname: opts.nickname || '',
         avatar: opts.avatar || '',
         role: 'user'
-      });
+      }, { onConflict: 'id' });
       if (profileErr) return { ok: false, msg: profileErr.message };
     }
-    return { ok: true };
+    return { ok: true, needsConfirmation, email };
+  }
+
+  async function resendVerification(email) {
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
+    return error ? { ok: false, msg: error.message } : { ok: true };
   }
 
   async function login(email, password) {
@@ -460,7 +464,7 @@ const Store = (() => {
 
   return {
     // Auth
-    getCurrentUser, getCurrentUserInfo, isLoggedIn, register, login, logout,
+    getCurrentUser, getCurrentUserInfo, isLoggedIn, register, login, logout, resendVerification,
     // Roles
     isModerator, isAdmin, isAdminLoggedIn,
     moderatorLogin, adminLoginUser,
