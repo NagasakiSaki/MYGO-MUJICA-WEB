@@ -385,19 +385,33 @@ async function renderRecLists() {
 // ═══════════════════════════════════════════════════════
 //  SITE SETTINGS
 // ═══════════════════════════════════════════════════════
-function renderSiteTab() {
+async function renderSiteTab() {
   const panel = document.getElementById('asite'); if (!panel) return;
+  const info = await Store.getSiteInfo();
   panel.innerHTML = `
     <div class="admin-form">
       <h3>网站信息</h3>
-      <div class="form-row"><label>网站标题</label><input type="text" id="siteTitle" value="MYGO-MUJICA-WEB"></div>
-      <div class="form-row"><label>首页副标题</label><input type="text" id="siteSubtitle" value="记录个人的文学创作、代码项目，以及那些值得被记住的作品。"></div>
-      <div class="btn-row"><button class="admin-btn primary" onclick="showFormMsg('siteFormMsg','已保存','success')">保存</button></div>
+      <div class="form-row"><label>网站标题</label><input type="text" id="siteTitle" value="${escHtml(info.title)}"></div>
+      <div class="form-row"><label>首页副标题</label><input type="text" id="siteSubtitle" value="${escHtml(info.subtitle)}"></div>
+      <div class="btn-row"><button class="admin-btn primary" onclick="window.saveSiteSettings()">保存</button></div>
       <div class="msg" id="siteFormMsg"></div>
     </div>
     <div class="admin-form" id="adminMgmtSection"></div>`;
   renderAdminMgmt();
 }
+
+window.saveSiteSettings = async function() {
+  const result = await Store.setSiteInfo({
+    title: document.getElementById('siteTitle').value.trim(),
+    subtitle: document.getElementById('siteSubtitle').value.trim()
+  });
+  if (result.ok) {
+    showFormMsg('siteFormMsg', '已保存（存储在浏览器本地）', 'success');
+    // Also update the live site title
+    document.querySelectorAll('.site-title').forEach(el => { el.textContent = document.getElementById('siteTitle').value.trim(); });
+    document.title = document.getElementById('siteTitle').value.trim();
+  }
+};
 
 async function renderAdminMgmt() {
   const section = document.getElementById('adminMgmtSection'); if (!section) return;
@@ -562,5 +576,11 @@ function clearMsg(id) {
   const el = document.getElementById(id);
   if (el) { el.textContent = ''; el.className = 'msg'; }
 }
+
+// ── Init ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const isAdmin = await Store.isAdminLoggedIn();
+  if (isAdmin) openAdminPanel();
+});
 
 })();

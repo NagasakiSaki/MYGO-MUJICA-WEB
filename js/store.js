@@ -350,7 +350,16 @@ const Store = (() => {
   }
 
   async function getSiteInfo() {
+    const saved = localStorage.getItem('mygo_site_info');
+    if (saved) { try { return JSON.parse(saved); } catch(e) {} }
     return { title: 'MYGO-MUJICA-WEB', subtitle: '记录个人的文学创作、代码项目，以及那些值得被记住的作品。' };
+  }
+
+  async function setSiteInfo(info) {
+    const current = await getSiteInfo();
+    const merged = { ...current, ...info };
+    localStorage.setItem('mygo_site_info', JSON.stringify(merged));
+    return { ok: true };
   }
 
   async function getLitById(id) {

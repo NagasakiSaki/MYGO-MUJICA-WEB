@@ -99,9 +99,7 @@ async function renderAuthArea() {
   let notifBell = '';
   if (info) {
     const count = await Store.unreadNotificationCount(info.username);
-    if (count > 0) {
-      notifBell = `<button class="theme-toggle" onclick="showNotifications()" title="${count}条新通知" style="position:relative;">🔔<span style="position:absolute;top:-2px;right:-2px;background:var(--danger);color:#fff;font-size:0.6rem;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${count > 9 ? '9+' : count}</span></button>`;
-    }
+    notifBell = `<button class="theme-toggle" onclick="showNotifications()" title="${count}条新通知" style="position:relative;">🔔${count > 0 ? `<span style="position:absolute;top:-2px;right:-2px;background:var(--danger);color:#fff;font-size:0.6rem;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${count > 9 ? '9+' : count}</span>` : ''}</button>`;
   }
 
   if (info) {
@@ -291,9 +289,8 @@ async function doStaffRegister() {
     }
   );
   if (result.ok) {
-    // Manually set role to moderator (requires admin intervention in real Supabase flow)
-    // For now, register as user and tell them
-    msg.textContent = '注册成功！请让版主在社区管理中提拔你为版主。'; msg.className = 'msg success';
+    msg.innerHTML = '注册成功！如果这是<strong>第一个版主</strong>，请打开浏览器控制台(F12)执行：<br><code style="font-size:0.75rem;word-break:break-all;">becomeFirstModerator("你的用户名")</code><br>否则请联系已有版主提拔你。';
+    msg.className = 'msg success';
   } else { msg.textContent = result.msg; msg.className = 'msg error'; }
 }
 
@@ -425,6 +422,33 @@ function showProfileModal() {
     });
   });
 }
+
+// ── First moderator setup (console helper) ────────────
+window.becomeFirstModerator = async function(username, serviceRoleKey) {
+  if (!username) { console.log('用法: becomeFirstModerator("用户名", "service_role密钥")'); return; }
+  if (!serviceRoleKey) {
+    serviceRoleKey = prompt('请输入 Supabase 项目的 service_role 密钥（在 Settings > API 中可找到）：');
+    if (!serviceRoleKey) return;
+  }
+  // Get user ID
+  const resp = await fetch('https://xciemvihmjbfwtslhfwq.supabase.co/rest/v1/profiles?select=id,username&username=eq.' + encodeURIComponent(username), {
+    headers: { 'apikey': serviceRoleKey, 'Authorization': 'Bearer ' + serviceRoleKey }
+  });
+  const profiles = await resp.json();
+  if (!profiles.length) { console.log('用户 "' + username + '" 不存在'); return; }
+  // Update role
+  const updateResp = await fetch('https://xciemvihmjbfwtslhfwq.supabase.co/rest/v1/profiles?id=eq.' + profiles[0].id, {
+    method: 'PATCH',
+    headers: { 'apikey': serviceRoleKey, 'Authorization': 'Bearer ' + serviceRoleKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: 'moderator' })
+  });
+  if (updateResp.ok) {
+    console.log('✅ ' + username + ' 已提升为版主！请重新登录。');
+    alert(username + ' 已成功设为版主！请退出后重新登录。');
+  } else {
+    console.log('❌ 失败: ' + await updateResp.text());
+  }
+};
 
 // ═══════════════════════════════════════════════════════
 //  HOME PAGE
