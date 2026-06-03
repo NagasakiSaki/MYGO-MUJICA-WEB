@@ -115,34 +115,34 @@ function renderAuthModal() {
       <div class="form-group"><label>邮箱</label><input type="email" id="loginEmail"></div>
       <div class="form-group"><label>密码</label><input type="password" id="loginPassword"></div>
       <button class="btn btn-primary" style="background:var(--accent);color:#fff;border:none;padding:0.55rem;border-radius:var(--radius-sm);cursor:pointer;width:100%;font-size:0.95rem;" onclick="doLogin()">登录</button>
-      <p class="switch-text">没有账号？<a onclick="showAuthSubForm('userRegister')">立即注册</a></p>
-      <p class="switch-text" style="margin-top:0.25rem;"><a onclick="showAuthSubForm('staffKey')" style="color:var(--text-muted);font-size:0.78rem;">管理员/版主入口 →</a></p></div>
+      <p class="switch-text">没有账号？<a onclick="showAuthSubForm('userRegisterForm')">立即注册</a></p>
+      <p class="switch-text" style="margin-top:0.25rem;"><a onclick="showAuthSubForm('staffKeyForm')" style="color:var(--text-muted);font-size:0.78rem;">管理员/版主入口 →</a></p></div>
     <div id="userRegisterForm" style="display:none;"><h2>注册</h2><div class="msg" id="registerMsg"></div>
       <div class="form-group"><label>邮箱</label><input type="email" id="regEmail"></div>
       <div class="form-group"><label>用户名</label><input type="text" id="regUsername"></div>
       <div class="form-group"><label>密码（至少6位）</label><input type="password" id="regPassword"></div>
       <div class="form-group"><label>昵称（可选）</label><input type="text" id="regNickname"></div>
       <button class="btn btn-primary" style="background:var(--accent);color:#fff;border:none;padding:0.55rem;border-radius:var(--radius-sm);cursor:pointer;width:100%;font-size:0.95rem;" onclick="doRegister()">注册</button>
-      <p class="switch-text">已有账号？<a onclick="showAuthSubForm('userLogin')">去登录</a></p></div>
+      <p class="switch-text">已有账号？<a onclick="showAuthSubForm('userLoginForm')">去登录</a></p></div>
     <div id="staffKeyForm" style="display:none;"><h2>管理员/版主验证</h2><div class="msg" id="staffKeyMsg"></div>
       <div class="form-group"><label>请输入密钥</label><input type="password" id="staffKeyInput" placeholder="输入密钥"></div>
       <button class="btn btn-primary" style="background:var(--accent);color:#fff;border:none;padding:0.55rem;border-radius:var(--radius-sm);cursor:pointer;width:100%;font-size:0.95rem;" onclick="verifyStaffKey()">验证</button>
-      <p class="switch-text"><a onclick="showAuthSubForm('userLogin')">返回</a></p></div>
+      <p class="switch-text"><a onclick="showAuthSubForm('userLoginForm')">返回</a></p></div>
     <div id="staffLoginForm" style="display:none;"><h2>版主/管理员登录</h2><div class="msg" id="staffLoginMsg"></div>
       <div class="form-group"><label>邮箱</label><input type="email" id="staffLoginEmail"></div>
       <div class="form-group"><label>密码</label><input type="password" id="staffLoginPassword"></div>
       <button class="btn btn-primary" style="background:var(--accent);color:#fff;border:none;padding:0.55rem;border-radius:var(--radius-sm);cursor:pointer;width:100%;font-size:0.95rem;" onclick="doStaffLogin()">登录</button>
-      <p class="switch-text"><a onclick="showAuthSubForm('staffRegister')">注册新管理员</a> &nbsp; <a onclick="showAuthSubForm('userLogin')">返回</a></p></div>
+      <p class="switch-text"><a onclick="showAuthSubForm('staffRegisterForm')">注册新管理员</a> &nbsp; <a onclick="showAuthSubForm('userLoginForm')">返回</a></p></div>
     <div id="staffRegisterForm" style="display:none;"><h2>注册管理员</h2><div class="msg" id="staffRegMsg"></div>
       <div class="form-group"><label>邮箱</label><input type="email" id="staffRegEmail"></div>
       <div class="form-group"><label>用户名</label><input type="text" id="staffRegUsername"></div>
       <div class="form-group"><label>密码（至少6位）</label><input type="password" id="staffRegPassword"></div>
       <div class="form-group"><label>昵称（可选）</label><input type="text" id="staffRegNickname"></div>
       <button class="btn btn-primary" style="background:var(--accent);color:#fff;border:none;padding:0.55rem;border-radius:var(--radius-sm);cursor:pointer;width:100%;font-size:0.95rem;" onclick="doStaffRegister()">注册</button>
-      <p class="switch-text"><a onclick="showAuthSubForm('staffLogin')">返回登录</a></p></div>`;
+      <p class="switch-text"><a onclick="showAuthSubForm('staffLoginForm')">返回登录</a></p></div>`;
 }
 
-function showAuthModal() { document.getElementById('authModal').classList.add('show'); showAuthSubForm('userLogin'); }
+function showAuthModal() { document.getElementById('authModal').classList.add('show'); showAuthSubForm('userLoginForm'); }
 function showAuthSubForm(formId) {
   ['userLoginForm','userRegisterForm','staffKeyForm','staffLoginForm','staffRegisterForm'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
   const el = document.getElementById(formId); if (el) el.style.display = '';
@@ -179,7 +179,7 @@ async function doRegister() {
       msg.className = 'msg success';
     } else {
       msg.textContent = '注册成功！请登录。'; msg.className = 'msg success';
-      setTimeout(() => showAuthSubForm('userLogin'), 1000);
+      setTimeout(() => showAuthSubForm('userLoginForm'), 1000);
     }
   } else { msg.textContent = result.msg; msg.className = 'msg error'; }
 }
@@ -195,7 +195,7 @@ window.resendVerifyEmail = async function(email) {
 function verifyStaffKey() {
   const input = document.getElementById('staffKeyInput').value.trim().toLowerCase();
   const msg = document.getElementById('staffKeyMsg');
-  if (SECRET_KEYS.includes(input)) { msg.textContent = '验证通过'; msg.className = 'msg success'; setTimeout(() => showAuthSubForm('staffLogin'), 500); }
+  if (SECRET_KEYS.includes(input)) { msg.textContent = '验证通过'; msg.className = 'msg success'; setTimeout(() => showAuthSubForm('staffLoginForm'), 500); }
   else { msg.textContent = '密钥错误'; msg.className = 'msg error'; }
 }
 async function doStaffLogin() {
