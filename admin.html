@@ -25,7 +25,7 @@
   <p style="color:var(--text-muted);margin-bottom:1rem;">点击下方按钮进入管理后台</p>
   <button class="admin-btn primary" onclick="window.openAdminLogin()" style="font-size:1rem;padding:0.6rem 2rem;">进入管理后台</button>
   <p style="color:var(--text-muted);font-size:0.82rem;margin-top:1.5rem;">
-    也可以直接在网站任意页面底部点击「管理」链接进入
+    也可以在网站任意页面右上角登录后进入
   </p>
 </main>
 
@@ -33,9 +33,15 @@
   &copy; 2026 MYGO-MUJICA-WEB
 </footer>
 
+<!-- Auth Modal -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal-box" id="authModalBox"></div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/store.js"></script>
+<script src="js/main.js"></script>
 <script src="js/admin-panel.js"></script>
 </body>
 </html>

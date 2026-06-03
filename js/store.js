@@ -330,28 +330,30 @@ const Store = (() => {
   //  CONTENT GETTERS
   // ═══════════════════════════════════════
 
+  async function safeQuery(fn) { try { return await fn(); } catch(e) { console.error('Supabase error:', e); return null; } }
+
   async function getLiterature() {
-    const { data } = await supabase.from('literature').select('*').order('date', { ascending: false });
-    return data || [];
+    const r = await safeQuery(() => supabase.from('literature').select('*').order('date', { ascending: false }));
+    return (r && r.data) ? r.data : [];
   }
 
   async function getProjects() {
-    const { data } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
-    return data || [];
+    const r = await safeQuery(() => supabase.from('projects').select('*').order('created_at', { ascending: false }));
+    return (r && r.data) ? r.data : [];
   }
 
   async function getRecommendations() {
-    const { data } = await supabase.from('recommendations').select('*').order('created_at', { ascending: false });
+    const r = await safeQuery(() => supabase.from('recommendations').select('*').order('created_at', { ascending: false }));
     const cats = { literary: [], popular: [], lightnovel: [], manga: [], movie: [], drama: [], anime: [], music: [] };
-    (data || []).forEach(r => {
-      if (cats[r.category]) cats[r.category].push(r);
-    });
+    if (r && r.data) r.data.forEach(item => { if (cats[item.category]) cats[item.category].push(item); });
     return cats;
   }
 
   async function getSiteInfo() {
-    const saved = localStorage.getItem('mygo_site_info');
-    if (saved) { try { return JSON.parse(saved); } catch(e) {} }
+    try {
+      const saved = localStorage.getItem('mygo_site_info');
+      if (saved) { const parsed = JSON.parse(saved); if (parsed && parsed.title) return parsed; }
+    } catch(e) { /* corrupted data, use defaults */ }
     return { title: 'MYGO-MUJICA-WEB', subtitle: '记录个人的文学创作、代码项目，以及那些值得被记住的作品。' };
   }
 
@@ -363,33 +365,33 @@ const Store = (() => {
   }
 
   async function getLitById(id) {
-    const { data } = await supabase.from('literature').select('*').eq('id', id).single();
-    return data;
+    const r = await safeQuery(() => supabase.from('literature').select('*').eq('id', id).single());
+    return (r && r.data) ? r.data : null;
   }
 
   async function getProjById(id) {
-    const { data } = await supabase.from('projects').select('*').eq('id', id).single();
-    return data;
+    const r = await safeQuery(() => supabase.from('projects').select('*').eq('id', id).single());
+    return (r && r.data) ? r.data : null;
   }
 
   async function getRecById(id) {
-    const { data } = await supabase.from('recommendations').select('*').eq('id', id).single();
-    return data ? { cat: data.category, item: data } : null;
+    const r = await safeQuery(() => supabase.from('recommendations').select('*').eq('id', id).single());
+    return (r && r.data) ? { cat: r.data.category, item: r.data } : null;
   }
 
   async function getUsers() {
-    const { data } = await supabase.from('profiles').select('*').order('created_at');
-    return data || [];
+    const r = await safeQuery(() => supabase.from('profiles').select('*').order('created_at'));
+    return (r && r.data) ? r.data : [];
   }
 
   async function getAdmins() {
-    const { data } = await supabase.from('profiles').select('*').in('role', ['admin', 'moderator']);
-    return data || [];
+    const r = await safeQuery(() => supabase.from('profiles').select('*').in('role', ['admin', 'moderator']));
+    return (r && r.data) ? r.data : [];
   }
 
   async function getModerators() {
-    const { data } = await supabase.from('profiles').select('*').eq('role', 'moderator');
-    return data || [];
+    const r = await safeQuery(() => supabase.from('profiles').select('*').eq('role', 'moderator'));
+    return (r && r.data) ? r.data : [];
   }
 
   // ═══════════════════════════════════════
@@ -401,8 +403,6 @@ const Store = (() => {
   async function setProjects(items) { /* Not needed */ }
 
   async function setRecommendations(recs) { /* Not needed */ }
-
-  async function setSiteInfo(info) { /* Hardcoded for now, could use a settings table */ }
 
   async function insertLiterature(item) {
     const { error } = await supabase.from('literature').insert(item);

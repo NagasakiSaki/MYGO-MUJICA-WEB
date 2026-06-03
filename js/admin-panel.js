@@ -114,7 +114,7 @@ async function renderLitTab() {
 }
 
 window.saveLit = async function() {
-  if (!requireModerator()) return;
+  if (!(await requireModerator())) return;
   const item = {
     title: document.getElementById('litTitle').value.trim(),
     date: document.getElementById('litDate').value,
@@ -150,7 +150,7 @@ window.editLit = async function(id) {
 };
 
 window.deleteLit = async function(id) {
-  if (!requireModerator()) return;
+  if (!(await requireModerator())) return;
   if (!confirm('确认删除？')) return;
   await Store.deleteLiterature(id);
   if (editingLitId === id) window.cancelLit();
@@ -204,7 +204,7 @@ async function renderProjTab() {
 }
 
 window.saveProj = async function() {
-  if (!requireModerator()) return;
+  if (!(await requireModerator())) return;
   const item = {
     name: document.getElementById('projName').value.trim(),
     description: document.getElementById('projDesc').value.trim(),
@@ -238,7 +238,7 @@ window.editProj = async function(id) {
 };
 
 window.deleteProj = async function(id) {
-  if (!requireModerator()) return;
+  if (!(await requireModerator())) return;
   if (!confirm('确认删除？')) return;
   await Store.deleteProject(id);
   if (editingProjId === id) window.cancelProj();
@@ -308,7 +308,7 @@ async function renderRecTab() {
 }
 
 window.saveRec = async function() {
-  if (!requireModerator()) return;
+  if (!(await requireModerator())) return;
   const item = {
     title: document.getElementById('recTitle').value.trim(),
     category: document.getElementById('recCat').value,
@@ -350,7 +350,7 @@ window.editRec = async function(id) {
 };
 
 window.deleteRec = async function(id) {
-  if (!requireModerator()) return;
+  if (!(await requireModerator())) return;
   if (!confirm('确认删除？')) return;
   await Store.deleteRecommendation(id);
   if (editingRecId === id) window.cancelRec();
@@ -556,9 +556,10 @@ window.banUserDialog = async function(username) {
 };
 
 // ── Helpers ──────────────────────────────────────────
-function requireModerator() {
-  // We can't block async, but the save functions check before proceeding
-  return true; // Actual check is in save functions via Store.isModerator()
+async function requireModerator() {
+  const isMod = await Store.isModerator();
+  if (!isMod) alert('只有版主可以修改内容。Supabase RLS 也会阻止非版主写入。');
+  return isMod;
 }
 
 function escHtml(s) {
