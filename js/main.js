@@ -38,23 +38,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   initBackToTop();
   initProgressBar();
-  await mdPromise;
+
+  // Always show auth area first (with try/catch fallback)
+  try { await renderAuthArea(); } catch(e) { document.getElementById('authArea').innerHTML = '<button class="auth-btn" onclick="showAuthModal()">登录</button>'; }
+  renderAuthModal();
 
   const info = await Store.getSiteInfo();
   document.querySelectorAll('.site-title').forEach(el => { if (info.title) el.textContent = info.title; });
   document.title = info.title || 'MYGO-MUJICA-WEB';
 
-  await renderAuthArea();
-  renderAuthModal();
-
   const page = window.location.pathname.split('/').pop() || 'index.html';
   document.querySelectorAll('.site-nav a').forEach(link => { if (link.getAttribute('href') === page) link.classList.add('active'); });
 
+  mdPromise.catch(() => {}); // don't block on markdown
+
   if (page === 'index.html' || page === '') renderHomepage(info);
-  else if (page === 'literature.html') { showLoading('lit-list', 'list'); await renderLiterature(); }
-  else if (page === 'projects.html') { showLoading('proj-list', 'list'); await renderProjects(); }
-  else if (page === 'recommendations.html') { ['rec-literary','rec-popular','rec-lightnovel','rec-manga','rec-movie','rec-drama','rec-anime','rec-music'].forEach(id => showLoading(id, 'list')); await renderRecommendations(); }
-  else if (page === 'detail.html') { showLoading('detailContent', 'detail'); await renderDetail(); }
+  else if (page === 'literature.html') { showLoading('lit-list', 'list'); await renderLiterature().catch(()=>{}); }
+  else if (page === 'projects.html') { showLoading('proj-list', 'list'); await renderProjects().catch(()=>{}); }
+  else if (page === 'recommendations.html') { ['rec-literary','rec-popular','rec-lightnovel','rec-manga','rec-movie','rec-drama','rec-anime','rec-music'].forEach(id => showLoading(id, 'list')); await renderRecommendations().catch(()=>{}); }
+  else if (page === 'detail.html') { showLoading('detailContent', 'detail'); await renderDetail().catch(()=>{}); }
 });
 
 // ═══════════════════════════════════════════════════════
@@ -69,7 +71,8 @@ function userAvatarHtml(profile) {
 async function renderAuthArea() {
   const area = document.getElementById('authArea');
   if (!area) return;
-  const info = await Store.getCurrentUserInfo();
+  let info = null;
+  try { info = await Store.getCurrentUserInfo(); } catch(e) { /* Supabase unavailable */ }
   const themeIcon = (document.documentElement.getAttribute('data-theme') === 'dark') ? '☀️' : '🌙';
   const extras = `<button class="search-toggle" onclick="openSearch()" title="搜索">🔍</button><button class="theme-toggle" onclick="toggleTheme();renderAuthArea();" title="切换主题">${themeIcon}</button>`;
 
